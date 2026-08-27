@@ -1,119 +1,40 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./Users.css";
 
 function Users() {
-    const [users, setUsers] = useState([
-        {
-            id: 1,
-            name: "John Smith",
-            email: "john.smith@company.com",
-            department: "IT Department",
-            role: "Employee",
-            status: "Active"
-        },
-        {
-            id: 2,
-            name: "Maria Santos",
-            email: "maria.santos@company.com",
-            department: "Finance",
-            role: "Employee",
-            status: "Active"
-        },
-        {
-            id: 3,
-            name: "James Wilson",
-            email: "james.wilson@company.com",
-            department: "Human Resources",
-            role: "Employee",
-            status: "Active"
-        },
-        {
-            id: 4,
-            name: "Sarah Johnson",
-            email: "sarah.johnson@company.com",
-            department: "Marketing",
-            role: "Employee",
-            status: "Inactive"
-        }
-    ]);
-
-    const [search, setSearch] = useState("");
+    const [users, setUsers] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
     const [showModal, setShowModal] = useState(false);
-    const [editingUser, setEditingUser] = useState(null);
-
     const [form, setForm] = useState({
-        name: "",
+        fullName: "",
         email: "",
-        department: "IT Department",
-        role: "Employee",
-        status: "Active"
+        password: ""
     });
 
-    const activeUsers = users.filter(
-        (user) => user.status === "Active"
-    ).length;
+    const loadUsers = async () => {
+        try {
+            setLoading(true);
+            setError("");
 
-    const inactiveUsers = users.filter(
-        (user) => user.status === "Inactive"
-    ).length;
+            const response = await fetch("http://localhost:5000/api/users");
 
-    const filteredUsers = users.filter((user) => {
-        const keyword = search.toLowerCase().trim();
+            if (!response.ok) {
+                throw new Error("Failed to load users");
+            }
 
-        return (
-            user.name.toLowerCase().includes(keyword) ||
-            user.email.toLowerCase().includes(keyword) ||
-            user.department.toLowerCase().includes(keyword) ||
-            user.role.toLowerCase().includes(keyword) ||
-            user.status.toLowerCase().includes(keyword)
-        );
-    });
-
-    const getAvatarClass = (id) => {
-        const classes = [
-            "avatar-blue",
-            "avatar-purple",
-            "avatar-green",
-            "avatar-orange",
-            "avatar-pink",
-            "avatar-cyan"
-        ];
-
-        return classes[(id - 1) % classes.length];
+            const data = await response.json();
+            setUsers(data.users || []);
+        } catch (error) {
+            setError(error.message);
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const openAddModal = () => {
-        setEditingUser(null);
-
-        setForm({
-            name: "",
-            email: "",
-            department: "IT Department",
-            role: "Employee",
-            status: "Active"
-        });
-
-        setShowModal(true);
-    };
-
-    const openEditModal = (user) => {
-        setEditingUser(user);
-
-        setForm({
-            name: user.name,
-            email: user.email,
-            department: user.department,
-            role: user.role,
-            status: user.status
-        });
-
-        setShowModal(true);
-    };
-
-    const closeModal = () => {
-        setShowModal(false);
-        setEditingUser(null);
-    };
+    useEffect(() => {
+        loadUsers();
+    }, []);
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -124,500 +45,221 @@ function Users() {
         }));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (!form.name.trim() || !form.email.trim()) {
+        try {
+            const response = await fetch(
+                "http://localhost:5000/api/users",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(form)
+                }
+            );
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || "Failed to create user");
+            }
+
+            setForm({
+                fullName: "",
+                email: "",
+                password: ""
+            });
+
+            setShowModal(false);
+            loadUsers();
+        } catch (error) {
+            window.alert(error.message);
+        }
+    };
+
+    const handleDelete = async (id, fullName) => {
+        const confirmed = window.confirm(
+            "Are you sure you want to delete " + fullName + "?"
+        );
+
+        if (!confirmed) {
             return;
         }
 
-        if (editingUser) {
-            setUsers((previous) =>
-                previous.map((user) =>
-                    user.id === editingUser.id
-                        ? {
-                              ...user,
-                              name: form.name.trim(),
-                              email: form.email.trim(),
-                              department: form.department,
-                              role: form.role,
-                              status: form.status
-                          }
-                        : user
-                )
+        try {
+            const response = await fetch(
+                "http://localhost:5000/api/users/" + id,
+                {
+                    method: "DELETE"
+                }
             );
-        } else {
-            const newUser = {
-                id:
-                    users.length > 0
-                        ? Math.max(...users.map((user) => user.id)) + 1
-                        : 1,
-                name: form.name.trim(),
-                email: form.email.trim(),
-                department: form.department,
-                role: form.role,
-                status: form.status
-            };
 
-            setUsers((previous) => [...previous, newUser]);
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || "Failed to delete user");
+            }
+
+            loadUsers();
+        } catch (error) {
+            window.alert(error.message);
         }
-
-        closeModal();
-    };
-
-    const handleDelete = (id) => {
-        const user = users.find((item) => item.id === id);
-
-        if (!user) return;
-
-        const confirmed = window.confirm(
-            `Delete ${user.name}?`
-        );
-
-        if (!confirmed) return;
-
-        setUsers((previous) =>
-            previous.filter((item) => item.id !== id)
-        );
     };
 
     return (
-        <main className="users-page">
-
-            {/* Page Header */}
+        <div className="users-page">
             <header className="users-page-header">
                 <div>
                     <h1>Users</h1>
-
-                    <p>
-                        Manage users and their system access.
-                    </p>
+                    <p>Manage system users and their accounts.</p>
                 </div>
 
                 <button
                     className="users-primary-btn"
-                    onClick={openAddModal}
+                    onClick={() => setShowModal(true)}
                 >
                     <span>+</span>
-                    Add User
+                    Add New User
                 </button>
             </header>
 
-            {/* Statistics */}
-            <section className="users-stats">
-
-                <div className="users-stat-card total">
-                    <div className="users-stat-icon">
-                        U
-                    </div>
-
-                    <div>
-                        <span>Total Users</span>
-
-                        <strong>
-                            {users.length}
-                        </strong>
-
-                        <small>
-                            Registered accounts
-                        </small>
-                    </div>
-                </div>
-
-                <div className="users-stat-card active">
-                    <div className="users-stat-icon">
-                        A
-                    </div>
-
-                    <div>
-                        <span>Active Users</span>
-
-                        <strong>
-                            {activeUsers}
-                        </strong>
-
-                        <small>
-                            Currently active
-                        </small>
-                    </div>
-                </div>
-
-                <div className="users-stat-card inactive">
-                    <div className="users-stat-icon">
-                        I
-                    </div>
-
-                    <div>
-                        <span>Inactive Users</span>
-
-                        <strong>
-                            {inactiveUsers}
-                        </strong>
-
-                        <small>
-                            Inactive accounts
-                        </small>
-                    </div>
-                </div>
-
-            </section>
-
-            {/* Users Card */}
             <section className="users-card">
-
                 <div className="users-card-header">
-
                     <div>
-                        <h2>System Users</h2>
-
+                        <h2>User List</h2>
                         <p>
-                            View and manage registered users.
+                            View and manage registered system users.
                         </p>
                     </div>
 
-                    <div className="users-search">
-
-                        <svg
-                            width="17"
-                            height="17"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                        >
-                            <circle
-                                cx="11"
-                                cy="11"
-                                r="7"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                            />
-
-                            <line
-                                x1="20"
-                                y1="20"
-                                x2="16.5"
-                                y2="16.5"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                            />
-                        </svg>
-
-                        <input
-                            type="text"
-                            placeholder="Search users..."
-                            value={search}
-                            onChange={(e) =>
-                                setSearch(e.target.value)
-                            }
-                        />
-
+                    <div className="users-count">
+                        {users.length} Users
                     </div>
-
                 </div>
 
-                {/* Results Bar */}
-                <div className="users-results-bar">
-
-                    <span>
-                        Showing{" "}
-                        <strong>
-                            {filteredUsers.length}
-                        </strong>{" "}
-                        of{" "}
-                        <strong>
-                            {users.length}
-                        </strong>{" "}
-                        users
-                    </span>
-
-                    {search && (
-                        <button
-                            className="clear-search-btn"
-                            onClick={() => setSearch("")}
-                        >
-                            Clear search
-                        </button>
-                    )}
-
-                </div>
-
-                {/* Table */}
-                <div className="users-table">
-
-                    <div className="users-table-head">
-                        <span>User</span>
-                        <span>Department</span>
-                        <span>Role</span>
-                        <span>Status</span>
-                        <span>Actions</span>
+                {loading ? (
+                    <div className="users-empty">
+                        Loading users...
                     </div>
+                ) : error ? (
+                    <div className="users-empty">
+                        <strong>Failed to load users</strong>
+                        <span>{error}</span>
+                    </div>
+                ) : users.length === 0 ? (
+                    <div className="users-empty">
+                        <strong>No users found</strong>
+                        <span>Add a new user to get started.</span>
+                    </div>
+                ) : (
+                    <div className="users-table">
+                        <div className="users-table-head">
+                            <span>User</span>
+                            <span>Email</span>
+                            <span>Created</span>
+                            <span>Actions</span>
+                        </div>
 
-                    <div className="users-list">
-
-                        {filteredUsers.map((user) => (
-
+                        {users.map((user) => (
                             <div
-                                className="user-row"
-                                key={user.id}
+                                className="users-table-row"
+                                key={user.Id}
                             >
-
-                                {/* User */}
                                 <div className="user-info">
-
-                                    <div
-                                        className={`user-avatar ${getAvatarClass(
-                                            user.id
-                                        )}`}
-                                    >
-                                        {user.name.charAt(0)}
+                                    <div className="user-avatar">
+                                        {user.FullName
+                                            ?.charAt(0)
+                                            .toUpperCase()}
                                     </div>
 
-                                    <div className="user-name-info">
-
-                                        <strong>
-                                            {user.name}
-                                        </strong>
-
-                                        <small>
-                                            {user.email}
-                                        </small>
-
+                                    <div>
+                                        <strong>{user.FullName}</strong>
+                                        <small>User #{user.Id}</small>
                                     </div>
-
                                 </div>
 
-                                {/* Department */}
-                                <div className="user-detail">
-
-                                    <span className="mobile-label">
-                                        Department
-                                    </span>
-
-                                    <span className="department-badge">
-                                        {user.department}
-                                    </span>
-
+                                <div className="user-email">
+                                    {user.Email}
                                 </div>
 
-                                {/* Role */}
-                                <div className="user-detail">
-
-                                    <span className="mobile-label">
-                                        Role
-                                    </span>
-
-                                    <span
-                                        className={`role-badge ${
-                                            user.role ===
-                                            "Administrator"
-                                                ? "role-admin"
-                                                : user.role ===
-                                                  "Manager"
-                                                ? "role-manager"
-                                                : "role-employee"
-                                        }`}
-                                    >
-                                        {user.role}
-                                    </span>
-
+                                <div className="user-created">
+                                    {new Date(
+                                        user.CreatedAt
+                                    ).toLocaleDateString()}
                                 </div>
 
-                                {/* Status */}
-                                <div className="user-detail">
-
-                                    <span className="mobile-label">
-                                        Status
-                                    </span>
-
-                                    <span
-                                        className={`user-status ${
-                                            user.status ===
-                                            "Active"
-                                                ? "user-active"
-                                                : "user-inactive"
-                                        }`}
-                                    >
-                                        <span className="status-dot"></span>
-
-                                        {user.status}
-                                    </span>
-
-                                </div>
-
-                                {/* Actions */}
                                 <div className="user-actions">
-
                                     <button
-                                        className="user-edit-btn"
-                                        onClick={() =>
-                                            openEditModal(user)
-                                        }
-                                    >
-                                        Edit
-                                    </button>
-
-                                    <button
+                                        type="button"
                                         className="user-delete-btn"
                                         onClick={() =>
                                             handleDelete(
-                                                user.id
+                                                user.Id,
+                                                user.FullName
                                             )
                                         }
                                     >
                                         Delete
                                     </button>
-
                                 </div>
-
                             </div>
-
                         ))}
-
-                        {/* Empty State */}
-                        {filteredUsers.length === 0 && (
-
-                            <div className="users-empty">
-
-                                <div className="users-empty-icon">
-
-                                    <svg
-                                        width="24"
-                                        height="24"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                    >
-                                        <circle
-                                            cx="11"
-                                            cy="11"
-                                            r="7"
-                                            stroke="currentColor"
-                                            strokeWidth="2"
-                                        />
-
-                                        <line
-                                            x1="20"
-                                            y1="20"
-                                            x2="16"
-                                            y2="16"
-                                            stroke="currentColor"
-                                            strokeWidth="2"
-                                            strokeLinecap="round"
-                                        />
-                                    </svg>
-
-                                </div>
-
-                                <strong>
-                                    No users found
-                                </strong>
-
-                                <span>
-                                    Try changing your search.
-                                </span>
-
-                                {search && (
-                                    <button
-                                        onClick={() =>
-                                            setSearch("")
-                                        }
-                                    >
-                                        Clear Search
-                                    </button>
-                                )}
-
-                            </div>
-
-                        )}
-
                     </div>
-
-                </div>
-
+                )}
             </section>
 
-            {/* Add / Edit Modal */}
             {showModal && (
-
                 <div
-                    className="users-modal-overlay"
+                    className="user-modal-overlay"
                     onMouseDown={(e) => {
-                        if (
-                            e.target ===
-                            e.currentTarget
-                        ) {
-                            closeModal();
+                        if (e.target === e.currentTarget) {
+                            setShowModal(false);
                         }
                     }}
                 >
-
-                    <div className="users-modal">
-
-                        {/* Modal Header */}
-                        <div className="users-modal-header">
-
+                    <div className="user-modal">
+                        <div className="user-modal-header">
                             <div>
-
-                                <div className="modal-title-row">
-
-                                    <div className="modal-icon">
-                                        U
-                                    </div>
-
-                                    <h2>
-                                        {editingUser
-                                            ? "Edit User"
-                                            : "Add New User"}
-                                    </h2>
-
-                                </div>
-
+                                <h2>Add New User</h2>
                                 <p>
-                                    {editingUser
-                                        ? "Update the user's information."
-                                        : "Enter the details for the new user."}
+                                    Enter the details for the new user.
                                 </p>
-
                             </div>
 
                             <button
-                                className="users-modal-close"
-                                onClick={closeModal}
+                                type="button"
+                                className="user-modal-close"
+                                onClick={() => setShowModal(false)}
                             >
                                 ×
                             </button>
-
                         </div>
 
-                        {/* Form */}
                         <form
-                            className="users-form"
+                            className="user-form"
                             onSubmit={handleSubmit}
                         >
-
-                            <div className="users-form-group">
-
-                                <label htmlFor="name">
+                            <div className="user-form-group">
+                                <label htmlFor="fullName">
                                     Full Name
                                 </label>
 
                                 <input
-                                    id="name"
+                                    id="fullName"
                                     type="text"
-                                    name="name"
-                                    value={form.name}
-                                    onChange={
-                                        handleInputChange
-                                    }
-                                    placeholder="e.g. John Smith"
+                                    name="fullName"
+                                    value={form.fullName}
+                                    onChange={handleInputChange}
+                                    placeholder="e.g. Maria Santos"
                                     required
                                 />
-
                             </div>
 
-                            <div className="users-form-group">
-
+                            <div className="user-form-group">
                                 <label htmlFor="email">
-                                    Email Address
+                                    Email
                                 </label>
 
                                 <input
@@ -625,143 +267,49 @@ function Users() {
                                     type="email"
                                     name="email"
                                     value={form.email}
-                                    onChange={
-                                        handleInputChange
-                                    }
-                                    placeholder="e.g. john.smith@company.com"
+                                    onChange={handleInputChange}
+                                    placeholder="e.g. maria@gmail.com"
                                     required
                                 />
-
                             </div>
 
-                            <div className="users-form-row">
-
-                                <div className="users-form-group">
-
-                                    <label htmlFor="department">
-                                        Department
-                                    </label>
-
-                                    <select
-                                        id="department"
-                                        name="department"
-                                        value={
-                                            form.department
-                                        }
-                                        onChange={
-                                            handleInputChange
-                                        }
-                                    >
-                                        <option>
-                                            IT Department
-                                        </option>
-
-                                        <option>
-                                            Finance
-                                        </option>
-
-                                        <option>
-                                            Human Resources
-                                        </option>
-
-                                        <option>
-                                            Marketing
-                                        </option>
-
-                                        <option>
-                                            Operations
-                                        </option>
-                                    </select>
-
-                                </div>
-
-                                <div className="users-form-group">
-
-                                    <label htmlFor="role">
-                                        Role
-                                    </label>
-
-                                    <select
-                                        id="role"
-                                        name="role"
-                                        value={form.role}
-                                        onChange={
-                                            handleInputChange
-                                        }
-                                    >
-                                        <option>
-                                            Employee
-                                        </option>
-
-                                        <option>
-                                            Manager
-                                        </option>
-
-                                        <option>
-                                            Administrator
-                                        </option>
-                                    </select>
-
-                                </div>
-
-                            </div>
-
-                            <div className="users-form-group">
-
-                                <label htmlFor="status">
-                                    Status
+                            <div className="user-form-group">
+                                <label htmlFor="password">
+                                    Password
                                 </label>
 
-                                <select
-                                    id="status"
-                                    name="status"
-                                    value={form.status}
-                                    onChange={
-                                        handleInputChange
-                                    }
-                                >
-                                    <option>
-                                        Active
-                                    </option>
-
-                                    <option>
-                                        Inactive
-                                    </option>
-                                </select>
-
+                                <input
+                                    id="password"
+                                    type="password"
+                                    name="password"
+                                    value={form.password}
+                                    onChange={handleInputChange}
+                                    placeholder="Enter password"
+                                    required
+                                />
                             </div>
 
-                            {/* Modal Buttons */}
-                            <div className="users-modal-actions">
-
+                            <div className="user-form-actions">
                                 <button
                                     type="button"
-                                    className="users-cancel-btn"
-                                    onClick={closeModal}
+                                    className="user-cancel-btn"
+                                    onClick={() => setShowModal(false)}
                                 >
                                     Cancel
                                 </button>
 
                                 <button
                                     type="submit"
-                                    className="users-save-btn"
+                                    className="user-save-btn"
                                 >
-                                    {editingUser
-                                        ? "Save Changes"
-                                        : "Add User"}
+                                    Add User
                                 </button>
-
                             </div>
-
                         </form>
-
                     </div>
-
                 </div>
-
             )}
-
-        </main>
+        </div>
     );
 }
 
