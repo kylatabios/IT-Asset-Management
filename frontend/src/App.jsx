@@ -3,7 +3,10 @@ import {
     Routes,
     Route,
     Navigate,
+    useNavigate
 } from "react-router-dom";
+
+import { useState } from "react";
 
 import "./App.css";
 
@@ -20,6 +23,63 @@ import Settings from "./pages/Settings";
    ============================================ */
 
 function Login() {
+    const navigate = useNavigate();
+
+    const [username, setUsername] = useState("");
+    const [password, setPassword] = useState("");
+    const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
+
+    const handleLogin = async (e) => {
+        e.preventDefault();
+
+        setError("");
+        setLoading(true);
+
+        try {
+            const response = await fetch(
+                "http://localhost:5000/api/auth/login",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        username,
+                        password
+                    })
+                }
+            );
+
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                setError(
+                    data.message || "Invalid username or password"
+                );
+                return;
+            }
+
+            localStorage.setItem("token", data.token);
+            localStorage.setItem(
+                "user",
+                JSON.stringify(data.user)
+            );
+
+            navigate("/dashboard");
+
+        } catch (error) {
+            console.error("Login error:", error);
+
+            setError(
+                "Unable to connect to the server."
+            );
+
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <div className="login-page">
             <div className="login-card">
@@ -30,32 +90,40 @@ function Login() {
                     </div>
 
                     <div>
-                        <h1>IT Asset Management</h1>
-                        <span>Management System</span>
+                        <h1>
+                            IT Asset Management
+                        </h1>
+
+                        <span>
+                            Management System
+                        </span>
                     </div>
                 </div>
 
                 <div className="login-header">
-                    <h2>Welcome back</h2>
+                    <h2>
+                        Welcome back
+                    </h2>
+
                     <p>
                         Sign in to access your account.
                     </p>
                 </div>
 
-                <form
-                    onSubmit={(e) => {
-                        e.preventDefault();
-                        window.location.href = "/dashboard";
-                    }}
-                >
+                <form onSubmit={handleLogin}>
+
                     <div className="form-group">
                         <label>
-                            Email Address
+                            Username
                         </label>
 
                         <input
-                            type="email"
-                            placeholder="Enter your email"
+                            type="text"
+                            placeholder="Enter your username"
+                            value={username}
+                            onChange={(e) =>
+                                setUsername(e.target.value)
+                            }
                             required
                         />
                     </div>
@@ -68,16 +136,35 @@ function Login() {
                         <input
                             type="password"
                             placeholder="Enter your password"
+                            value={password}
+                            onChange={(e) =>
+                                setPassword(e.target.value)
+                            }
                             required
                         />
                     </div>
 
+                    {error && (
+                        <p
+                            style={{
+                                color: "red",
+                                marginBottom: "15px"
+                            }}
+                        >
+                            {error}
+                        </p>
+                    )}
+
                     <button
                         type="submit"
                         className="signin-btn"
+                        disabled={loading}
                     >
-                        Sign In
+                        {loading
+                            ? "Signing in..."
+                            : "Sign In"}
                     </button>
+
                 </form>
 
             </div>
@@ -93,8 +180,6 @@ function Login() {
 function DashboardHome() {
     return (
         <div className="dashboard-home">
-
-            {/* Dashboard Header */}
 
             <header className="dashboard-header">
                 <div>
@@ -112,8 +197,6 @@ function DashboardHome() {
                 </button>
             </header>
 
-
-            {/* Statistics */}
 
             <section className="stats-grid">
 
@@ -203,11 +286,7 @@ function DashboardHome() {
             </section>
 
 
-            {/* Dashboard Content */}
-
             <section className="dashboard-content">
-
-                {/* Recent Assets */}
 
                 <div className="content-card">
 
@@ -233,8 +312,6 @@ function DashboardHome() {
 
                     <div className="asset-table">
 
-                        {/* Table Header */}
-
                         <div className="table-row table-head">
                             <span>
                                 Asset
@@ -253,8 +330,6 @@ function DashboardHome() {
                             </span>
                         </div>
 
-
-                        {/* Asset 1 */}
 
                         <div className="table-row">
 
@@ -291,8 +366,6 @@ function DashboardHome() {
                         </div>
 
 
-                        {/* Asset 2 */}
-
                         <div className="table-row">
 
                             <div className="asset-name">
@@ -327,8 +400,6 @@ function DashboardHome() {
 
                         </div>
 
-
-                        {/* Asset 3 */}
 
                         <div className="table-row">
 
@@ -368,8 +439,6 @@ function DashboardHome() {
 
                 </div>
 
-
-                {/* Quick Actions */}
 
                 <div className="content-card quick-actions">
 
@@ -446,17 +515,12 @@ function SystemLayout() {
 
                 <Routes>
 
-                    {/* Dashboard */}
-
                     <Route
                         path="/dashboard"
                         element={
                             <DashboardHome />
                         }
                     />
-
-
-                    {/* Assets */}
 
                     <Route
                         path="/assets"
@@ -465,18 +529,12 @@ function SystemLayout() {
                         }
                     />
 
-
-                    {/* Users */}
-
                     <Route
                         path="/users"
                         element={
                             <Users />
                         }
                     />
-
-
-                    {/* Maintenance */}
 
                     <Route
                         path="/maintenance"
@@ -485,9 +543,6 @@ function SystemLayout() {
                         }
                     />
 
-
-                    {/* Reports */}
-
                     <Route
                         path="/reports"
                         element={
@@ -495,18 +550,12 @@ function SystemLayout() {
                         }
                     />
 
-
-                    {/* Settings */}
-
                     <Route
                         path="/settings"
                         element={
                             <Settings />
                         }
                     />
-
-
-                    {/* Unknown route */}
 
                     <Route
                         path="*"
@@ -537,17 +586,12 @@ function App() {
 
             <Routes>
 
-                {/* Login */}
-
                 <Route
                     path="/"
                     element={
                         <Login />
                     }
                 />
-
-
-                {/* System */}
 
                 <Route
                     path="/*"
