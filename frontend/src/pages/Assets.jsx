@@ -1,5 +1,34 @@
 import { useEffect, useState } from "react";
-import "./Assets.css";
+import {
+    Table,
+    Card,
+    Row,
+    Col,
+    Statistic,
+    Button,
+    Modal,
+    Form,
+    Input,
+    Select,
+    DatePicker,
+    Tag,
+    Popconfirm,
+    message,
+    Typography,
+    Space
+} from "antd";
+import {
+    PlusOutlined,
+    SearchOutlined,
+    LaptopOutlined,
+    DesktopOutlined,
+    PrinterOutlined,
+    WifiOutlined
+} from "@ant-design/icons";
+import dayjs from "dayjs";
+
+const { Title, Text } = Typography;
+const { Option } = Select;
 
 const API_URL = "http://localhost:5000/api/assets";
 
@@ -9,21 +38,14 @@ function Assets() {
     const [showModal, setShowModal] = useState(false);
     const [editingAsset, setEditingAsset] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
 
-    const [form, setForm] = useState({
-        assetTag: "",
-        assetName: "",
-        category: "Desktop",
-        brand: "",
-        model: "",
-        serialNumber: "",
-        status: "Active",
-        assignedTo: "",
-        purchaseDate: ""
-    });
+    const [form] = Form.useForm();
 
     const loadAssets = async () => {
         try {
+            setLoading(true);
+
             const response = await fetch(API_URL);
             const data = await response.json();
 
@@ -32,6 +54,7 @@ function Assets() {
             }
         } catch (error) {
             console.error("Failed to load assets:", error);
+            message.error("Failed to load assets");
         } finally {
             setLoading(false);
         }
@@ -72,40 +95,38 @@ function Assets() {
     const getAssetIcon = (category) => {
         switch (category) {
             case "Laptop":
-                return "LT";
+                return <LaptopOutlined />;
             case "Printer":
-                return "PR";
+                return <PrinterOutlined />;
             case "Monitor":
-                return "MN";
+                return <DesktopOutlined />;
             case "Network":
-                return "NW";
+                return <WifiOutlined />;
             default:
-                return "PC";
+                return <DesktopOutlined />;
         }
+    };
+
+    const getStatusColor = (status) => {
+        if (status === "Active") return "success";
+        if (status === "Maintenance") return "warning";
+        return "error";
     };
 
     const openAddModal = () => {
         setEditingAsset(null);
-
-        setForm({
-            assetTag: "",
-            assetName: "",
+        form.resetFields();
+        form.setFieldsValue({
             category: "Desktop",
-            brand: "",
-            model: "",
-            serialNumber: "",
-            status: "Active",
-            assignedTo: "",
-            purchaseDate: ""
+            status: "Active"
         });
-
         setShowModal(true);
     };
 
     const openEditModal = (asset) => {
         setEditingAsset(asset);
 
-        setForm({
+        form.setFieldsValue({
             assetTag: asset.AssetTag || "",
             assetName: asset.AssetName || "",
             category: asset.Category || "Desktop",
@@ -115,8 +136,8 @@ function Assets() {
             status: asset.Status || "Active",
             assignedTo: asset.AssignedTo || "",
             purchaseDate: asset.PurchaseDate
-                ? asset.PurchaseDate.substring(0, 10)
-                : ""
+                ? dayjs(asset.PurchaseDate.substring(0, 10))
+                : null
         });
 
         setShowModal(true);
@@ -125,31 +146,27 @@ function Assets() {
     const closeModal = () => {
         setShowModal(false);
         setEditingAsset(null);
+        form.resetFields();
     };
 
-    const handleInputChange = (e) => {
-        const { name, value } = e.target;
-
-        setForm((previous) => ({
-            ...previous,
-            [name]: value
-        }));
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-
-        if (!form.assetName.trim()) {
-            return;
-        }
-
+    const handleSubmit = async (values) => {
         const payload = {
-            ...form,
-            assetName: form.assetName.trim(),
-            assignedTo: form.assignedTo.trim() || null
+            assetTag: values.assetTag,
+            assetName: values.assetName.trim(),
+            category: values.category,
+            brand: values.brand || "",
+            model: values.model || "",
+            serialNumber: values.serialNumber || "",
+            status: values.status,
+            assignedTo: values.assignedTo?.trim() || null,
+            purchaseDate: values.purchaseDate
+                ? values.purchaseDate.format("YYYY-MM-DD")
+                : ""
         };
 
         try {
+            setSaving(true);
+
             const response = await fetch(
                 editingAsset
                     ? `${API_URL}/${editingAsset.Id}`
@@ -166,38 +183,28 @@ function Assets() {
             const data = await response.json();
 
             if (!response.ok || !data.success) {
-                alert(data.message || "Failed to save asset");
+                message.error(data.message || "Failed to save asset");
                 return;
             }
+
+            message.success(
+                editingAsset ? "Asset updated" : "Asset added"
+            );
 
             await loadAssets();
             closeModal();
         } catch (error) {
             console.error("Save asset error:", error);
-            alert("Failed to connect to the server");
+            message.error("Failed to connect to the server");
+        } finally {
+            setSaving(false);
         }
     };
 
-    const handleDelete = async (id) => {
-        const asset = assets.find(
-            (item) => item.Id === id
-        );
-
-        if (!asset) {
-            return;
-        }
-
-        const confirmed = window.confirm(
-            `Are you sure you want to delete ${asset.AssetName}?`
-        );
-
-        if (!confirmed) {
-            return;
-        }
-
+    const handleDelete = async (asset) => {
         try {
             const response = await fetch(
-                `${API_URL}/${id}`,
+                `${API_URL}/${asset.Id}`,
                 {
                     method: "DELETE"
                 }
@@ -206,513 +213,327 @@ function Assets() {
             const data = await response.json();
 
             if (!response.ok || !data.success) {
-                alert(data.message || "Failed to delete asset");
+                message.error(data.message || "Failed to delete asset");
                 return;
             }
 
+            message.success(`${asset.AssetName} deleted`);
             await loadAssets();
         } catch (error) {
             console.error("Delete asset error:", error);
-            alert("Failed to connect to the server");
+            message.error("Failed to connect to the server");
         }
     };
 
+    const columns = [
+        {
+            title: "Asset",
+            key: "asset",
+            render: (_, record) => (
+                <Space>
+                    <div
+                        style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: 9,
+                            background: "#eef2fb",
+                            color: "#3852a4",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: 16
+                        }}
+                    >
+                        {getAssetIcon(record.Category)}
+                    </div>
+                    <div>
+                        <div style={{ fontWeight: 600 }}>
+                            {record.AssetName}
+                        </div>
+                        <Text type="secondary" style={{ fontSize: 12 }}>
+                            {record.AssetTag}
+                        </Text>
+                    </div>
+                </Space>
+            )
+        },
+        {
+            title: "Category",
+            dataIndex: "Category",
+            key: "category"
+        },
+        {
+            title: "Status",
+            dataIndex: "Status",
+            key: "status",
+            render: (status) => (
+                <Tag color={getStatusColor(status)}>{status}</Tag>
+            ),
+            filters: [
+                { text: "Active", value: "Active" },
+                { text: "Maintenance", value: "Maintenance" },
+                { text: "Unavailable", value: "Unavailable" }
+            ],
+            onFilter: (value, record) => record.Status === value
+        },
+        {
+            title: "Assigned To",
+            dataIndex: "AssignedTo",
+            key: "assignedTo",
+            render: (value) => value || "Unassigned"
+        },
+        {
+            title: "Actions",
+            key: "actions",
+            render: (_, record) => (
+                <Space>
+                    <Button
+                        size="small"
+                        onClick={() => openEditModal(record)}
+                    >
+                        Edit
+                    </Button>
+
+                    <Popconfirm
+                        title="Delete this asset?"
+                        description={`Are you sure you want to delete ${record.AssetName}?`}
+                        okText="Delete"
+                        okButtonProps={{ danger: true }}
+                        onConfirm={() => handleDelete(record)}
+                    >
+                        <Button size="small" danger>
+                            Delete
+                        </Button>
+                    </Popconfirm>
+                </Space>
+            )
+        }
+    ];
+
     return (
-        <div className="assets-page">
-
-            <header className="assets-page-header">
-                <div>
-                    <h1>Assets</h1>
-                    <p>
+        <div style={{ padding: "8px 4px" }}>
+            <Row
+                justify="space-between"
+                align="middle"
+                style={{ marginBottom: 24 }}
+            >
+                <Col>
+                    <Title level={3} style={{ margin: 0 }}>
+                        Assets
+                    </Title>
+                    <Text type="secondary">
                         Manage and monitor all registered IT assets.
-                    </p>
-                </div>
+                    </Text>
+                </Col>
 
-                <button
-                    className="assets-primary-btn"
-                    onClick={openAddModal}
-                >
-                    <span>+</span>
-                    Add New Asset
-                </button>
-            </header>
+                <Col>
+                    <Button
+                        type="primary"
+                        icon={<PlusOutlined />}
+                        onClick={openAddModal}
+                    >
+                        Add New Asset
+                    </Button>
+                </Col>
+            </Row>
 
-            <section className="asset-stats">
-
-                <div className="asset-stat-card total">
-                    <div className="asset-stat-icon">
-                        A
-                    </div>
-
-                    <div>
-                        <span>Total Assets</span>
-                        <strong>{assets.length}</strong>
-                        <small>
-                            Registered equipment
-                        </small>
-                    </div>
-                </div>
-
-                <div className="asset-stat-card active">
-                    <div className="asset-stat-icon">
-                        A
-                    </div>
-
-                    <div>
-                        <span>Active Assets</span>
-                        <strong>{activeAssets}</strong>
-                        <small>
-                            Currently in use
-                        </small>
-                    </div>
-                </div>
-
-                <div className="asset-stat-card maintenance">
-                    <div className="asset-stat-icon">
-                        M
-                    </div>
-
-                    <div>
-                        <span>Maintenance</span>
-                        <strong>{maintenanceAssets}</strong>
-                        <small>
-                            Needs attention
-                        </small>
-                    </div>
-                </div>
-
-                <div className="asset-stat-card unavailable">
-                    <div className="asset-stat-icon">
-                        U
-                    </div>
-
-                    <div>
-                        <span>Unavailable</span>
-                        <strong>{unavailableAssets}</strong>
-                        <small>
-                            Not currently available
-                        </small>
-                    </div>
-                </div>
-
-            </section>
-
-            <section className="assets-card">
-
-                <div className="assets-card-header">
-
-                    <div>
-                        <h2>Asset List</h2>
-                        <p>
-                            View and manage your registered IT equipment.
-                        </p>
-                    </div>
-
-                    <div className="assets-search">
-
-                        <svg
-                            width="17"
-                            height="17"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                        >
-                            <circle
-                                cx="11"
-                                cy="11"
-                                r="7"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                            />
-
-                            <line
-                                x1="20"
-                                y1="20"
-                                x2="16.5"
-                                y2="16.5"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                            />
-                        </svg>
-
-                        <input
-                            type="text"
-                            placeholder="Search assets..."
-                            value={search}
-                            onChange={(e) =>
-                                setSearch(e.target.value)
-                            }
+            <Row gutter={16} style={{ marginBottom: 24 }}>
+                <Col span={6}>
+                    <Card>
+                        <Statistic
+                            title="Total Assets"
+                            value={assets.length}
+                            valueStyle={{ color: "#2563eb" }}
                         />
+                        <Text type="secondary" style={{ fontSize: 12 }}>
+                            Registered equipment
+                        </Text>
+                    </Card>
+                </Col>
 
-                        {search && (
-                            <button
-                                type="button"
-                                className="assets-search-clear"
-                                onClick={() => setSearch("")}
-                            >
-                                ×
-                            </button>
-                        )}
+                <Col span={6}>
+                    <Card>
+                        <Statistic
+                            title="Active Assets"
+                            value={activeAssets}
+                            valueStyle={{ color: "#159957" }}
+                        />
+                        <Text type="secondary" style={{ fontSize: 12 }}>
+                            Currently in use
+                        </Text>
+                    </Card>
+                </Col>
 
-                    </div>
+                <Col span={6}>
+                    <Card>
+                        <Statistic
+                            title="Maintenance"
+                            value={maintenanceAssets}
+                            valueStyle={{ color: "#d97706" }}
+                        />
+                        <Text type="secondary" style={{ fontSize: 12 }}>
+                            Needs attention
+                        </Text>
+                    </Card>
+                </Col>
 
-                </div>
+                <Col span={6}>
+                    <Card>
+                        <Statistic
+                            title="Unavailable"
+                            value={unavailableAssets}
+                            valueStyle={{ color: "#dc2626" }}
+                        />
+                        <Text type="secondary" style={{ fontSize: 12 }}>
+                            Not currently available
+                        </Text>
+                    </Card>
+                </Col>
+            </Row>
 
-                <div className="assets-table">
+            <Card
+                title="Asset List"
+                extra={
+                    <Input
+                        placeholder="Search assets..."
+                        prefix={<SearchOutlined />}
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        allowClear
+                        style={{ width: 240 }}
+                    />
+                }
+            >
+                <Table
+                    columns={columns}
+                    dataSource={filteredAssets}
+                    rowKey="Id"
+                    loading={loading}
+                    pagination={{ pageSize: 8 }}
+                />
+            </Card>
 
-                    <div className="assets-table-head">
-                        <span>Asset</span>
-                        <span>Category</span>
-                        <span>Status</span>
-                        <span>Assigned To</span>
-                        <span>Actions</span>
-                    </div>
-
-                    {loading ? (
-                        <div className="assets-empty">
-                            <strong>Loading assets...</strong>
-                        </div>
-                    ) : (
-                        filteredAssets.map((asset) => (
-                            <div
-                                className="assets-table-row"
-                                key={asset.Id}
-                            >
-
-                                <div className="asset-info">
-
-                                    <div
-                                        className={`asset-type-icon ${String(
-                                            asset.Category || ""
-                                        )
-                                            .toLowerCase()
-                                            .replace(/\s+/g, "-")}`}
-                                    >
-                                        {getAssetIcon(
-                                            asset.Category
-                                        )}
-                                    </div>
-
-                                    <div>
-                                        <strong>
-                                            {asset.AssetName}
-                                        </strong>
-
-                                        <small>
-                                            {asset.AssetTag}
-                                        </small>
-                                    </div>
-
-                                </div>
-
-                                <div className="asset-category">
-                                    {asset.Category}
-                                </div>
-
-                                <div>
-                                    <span
-                                        className={`asset-status ${
-                                            asset.Status === "Active"
-                                                ? "status-active"
-                                                : asset.Status === "Maintenance"
-                                                ? "status-maintenance"
-                                                : "status-unavailable"
-                                        }`}
-                                    >
-                                        <span className="status-dot"></span>
-                                        {asset.Status}
-                                    </span>
-                                </div>
-
-                                <div className="asset-assigned">
-                                    {asset.AssignedTo || "Unassigned"}
-                                </div>
-
-                                <div className="asset-actions">
-
-                                    <button
-                                        type="button"
-                                        className="asset-edit-btn"
-                                        onClick={() =>
-                                            openEditModal(asset)
-                                        }
-                                    >
-                                        Edit
-                                    </button>
-
-                                    <button
-                                        type="button"
-                                        className="asset-delete-btn"
-                                        onClick={() =>
-                                            handleDelete(asset.Id)
-                                        }
-                                    >
-                                        Delete
-                                    </button>
-
-                                </div>
-
-                            </div>
-                        ))
-                    )}
-
-                    {!loading &&
-                        filteredAssets.length === 0 && (
-                            <div className="assets-empty">
-                                <strong>
-                                    No assets found
-                                </strong>
-
-                                <span>
-                                    Try changing your search.
-                                </span>
-                            </div>
-                        )}
-
-                </div>
-
-            </section>
-
-            {showModal && (
-                <div
-                    className="asset-modal-overlay"
-                    onMouseDown={(e) => {
-                        if (e.target === e.currentTarget) {
-                            closeModal();
-                        }
-                    }}
+            <Modal
+                title={editingAsset ? "Edit Asset" : "Add New Asset"}
+                open={showModal}
+                onCancel={closeModal}
+                footer={null}
+                destroyOnClose
+            >
+                <Form
+                    form={form}
+                    layout="vertical"
+                    onFinish={handleSubmit}
                 >
+                    <Form.Item
+                        label="Asset Tag"
+                        name="assetTag"
+                    >
+                        <Input placeholder="e.g. IT-2026-002" />
+                    </Form.Item>
 
-                    <div className="asset-modal">
+                    <Form.Item
+                        label="Asset Name"
+                        name="assetName"
+                        rules={[
+                            {
+                                required: true,
+                                message: "Asset name is required"
+                            }
+                        ]}
+                    >
+                        <Input placeholder="e.g. Dell OptiPlex 7090" />
+                    </Form.Item>
 
-                        <div className="asset-modal-header">
-
-                            <div>
-                                <h2>
-                                    {editingAsset
-                                        ? "Edit Asset"
-                                        : "Add New Asset"}
-                                </h2>
-
-                                <p>
-                                    {editingAsset
-                                        ? "Update the asset information."
-                                        : "Enter the details for the new asset."}
-                                </p>
-                            </div>
-
-                            <button
-                                type="button"
-                                className="modal-close"
-                                onClick={closeModal}
+                    <Row gutter={12}>
+                        <Col span={12}>
+                            <Form.Item
+                                label="Category"
+                                name="category"
                             >
-                                ×
-                            </button>
+                                <Select>
+                                    <Option value="Desktop">Desktop</Option>
+                                    <Option value="Laptop">Laptop</Option>
+                                    <Option value="Printer">Printer</Option>
+                                    <Option value="Monitor">Monitor</Option>
+                                    <Option value="Network">Network</Option>
+                                </Select>
+                            </Form.Item>
+                        </Col>
 
-                        </div>
+                        <Col span={12}>
+                            <Form.Item
+                                label="Status"
+                                name="status"
+                            >
+                                <Select>
+                                    <Option value="Active">Active</Option>
+                                    <Option value="Maintenance">
+                                        Maintenance
+                                    </Option>
+                                    <Option value="Unavailable">
+                                        Unavailable
+                                    </Option>
+                                </Select>
+                            </Form.Item>
+                        </Col>
+                    </Row>
 
-                        <form
-                            className="asset-form"
-                            onSubmit={handleSubmit}
-                        >
+                    <Row gutter={12}>
+                        <Col span={12}>
+                            <Form.Item label="Brand" name="brand">
+                                <Input placeholder="e.g. Dell" />
+                            </Form.Item>
+                        </Col>
 
-                            <div className="asset-form-group">
-                                <label htmlFor="asset-tag">
-                                    Asset Tag
-                                </label>
+                        <Col span={12}>
+                            <Form.Item label="Model" name="model">
+                                <Input placeholder="e.g. OptiPlex 7090" />
+                            </Form.Item>
+                        </Col>
+                    </Row>
 
-                                <input
-                                    id="asset-tag"
-                                    type="text"
-                                    name="assetTag"
-                                    value={form.assetTag}
-                                    onChange={handleInputChange}
-                                    placeholder="e.g. IT-2026-002"
-                                />
-                            </div>
+                    <Form.Item
+                        label="Serial Number"
+                        name="serialNumber"
+                    >
+                        <Input placeholder="e.g. SN-TEST-002" />
+                    </Form.Item>
 
-                            <div className="asset-form-group">
-                                <label htmlFor="asset-name">
-                                    Asset Name
-                                </label>
+                    <Row gutter={12}>
+                        <Col span={12}>
+                            <Form.Item
+                                label="Assigned To"
+                                name="assignedTo"
+                            >
+                                <Input placeholder="e.g. John Smith" />
+                            </Form.Item>
+                        </Col>
 
-                                <input
-                                    id="asset-name"
-                                    type="text"
-                                    name="assetName"
-                                    value={form.assetName}
-                                    onChange={handleInputChange}
-                                    placeholder="e.g. Dell OptiPlex 7090"
-                                    required
-                                />
-                            </div>
+                        <Col span={12}>
+                            <Form.Item
+                                label="Purchase Date"
+                                name="purchaseDate"
+                            >
+                                <DatePicker style={{ width: "100%" }} />
+                            </Form.Item>
+                        </Col>
+                    </Row>
 
-                            <div className="asset-form-row">
-
-                                <div className="asset-form-group">
-                                    <label htmlFor="asset-category">
-                                        Category
-                                    </label>
-
-                                    <select
-                                        id="asset-category"
-                                        name="category"
-                                        value={form.category}
-                                        onChange={handleInputChange}
-                                    >
-                                        <option value="Desktop">
-                                            Desktop
-                                        </option>
-                                        <option value="Laptop">
-                                            Laptop
-                                        </option>
-                                        <option value="Printer">
-                                            Printer
-                                        </option>
-                                        <option value="Monitor">
-                                            Monitor
-                                        </option>
-                                        <option value="Network">
-                                            Network
-                                        </option>
-                                    </select>
-                                </div>
-
-                                <div className="asset-form-group">
-                                    <label htmlFor="asset-status">
-                                        Status
-                                    </label>
-
-                                    <select
-                                        id="asset-status"
-                                        name="status"
-                                        value={form.status}
-                                        onChange={handleInputChange}
-                                    >
-                                        <option value="Active">
-                                            Active
-                                        </option>
-                                        <option value="Maintenance">
-                                            Maintenance
-                                        </option>
-                                        <option value="Unavailable">
-                                            Unavailable
-                                        </option>
-                                    </select>
-                                </div>
-
-                            </div>
-
-                            <div className="asset-form-row">
-
-                                <div className="asset-form-group">
-                                    <label htmlFor="asset-brand">
-                                        Brand
-                                    </label>
-
-                                    <input
-                                        id="asset-brand"
-                                        type="text"
-                                        name="brand"
-                                        value={form.brand}
-                                        onChange={handleInputChange}
-                                        placeholder="e.g. Dell"
-                                    />
-                                </div>
-
-                                <div className="asset-form-group">
-                                    <label htmlFor="asset-model">
-                                        Model
-                                    </label>
-
-                                    <input
-                                        id="asset-model"
-                                        type="text"
-                                        name="model"
-                                        value={form.model}
-                                        onChange={handleInputChange}
-                                        placeholder="e.g. OptiPlex 7090"
-                                    />
-                                </div>
-
-                            </div>
-
-                            <div className="asset-form-group">
-                                <label htmlFor="asset-serial">
-                                    Serial Number
-                                </label>
-
-                                <input
-                                    id="asset-serial"
-                                    type="text"
-                                    name="serialNumber"
-                                    value={form.serialNumber}
-                                    onChange={handleInputChange}
-                                    placeholder="e.g. SN-TEST-002"
-                                />
-                            </div>
-
-                            <div className="asset-form-row">
-
-                                <div className="asset-form-group">
-                                    <label htmlFor="asset-assigned">
-                                        Assigned To
-                                    </label>
-
-                                    <input
-                                        id="asset-assigned"
-                                        type="text"
-                                        name="assignedTo"
-                                        value={form.assignedTo}
-                                        onChange={handleInputChange}
-                                        placeholder="e.g. John Smith"
-                                    />
-                                </div>
-
-                                <div className="asset-form-group">
-                                    <label htmlFor="asset-purchase-date">
-                                        Purchase Date
-                                    </label>
-
-                                    <input
-                                        id="asset-purchase-date"
-                                        type="date"
-                                        name="purchaseDate"
-                                        value={form.purchaseDate}
-                                        onChange={handleInputChange}
-                                    />
-                                </div>
-
-                            </div>
-
-                            <div className="asset-form-actions">
-
-                                <button
-                                    type="button"
-                                    className="asset-cancel-btn"
-                                    onClick={closeModal}
-                                >
-                                    Cancel
-                                </button>
-
-                                <button
-                                    type="submit"
-                                    className="asset-save-btn"
-                                >
-                                    {editingAsset
-                                        ? "Save Changes"
-                                        : "Add Asset"}
-                                </button>
-
-                            </div>
-
-                        </form>
-
-                    </div>
-
-                </div>
-            )}
-
+                    <Form.Item style={{ marginBottom: 0, textAlign: "right" }}>
+                        <Space>
+                            <Button onClick={closeModal}>Cancel</Button>
+                            <Button
+                                type="primary"
+                                htmlType="submit"
+                                loading={saving}
+                            >
+                                {editingAsset ? "Save Changes" : "Add Asset"}
+                            </Button>
+                        </Space>
+                    </Form.Item>
+                </Form>
+            </Modal>
         </div>
     );
 }
