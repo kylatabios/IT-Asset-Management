@@ -2,7 +2,9 @@ const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const { sql, dbConfig } = require("./config/database");
+
 const authRoutes = require("./routes/authRoutes");
+const assetRoutes = require("./routes/assetRoutes");
 
 dotenv.config();
 
@@ -14,6 +16,9 @@ app.use(express.json());
 
 // Authentication routes
 app.use("/api/auth", authRoutes);
+
+// Assets routes
+app.use("/api/assets", assetRoutes);
 
 // Test API
 app.get("/", (req, res) => {

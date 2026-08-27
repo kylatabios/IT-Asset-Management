@@ -1,66 +1,56 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./Assets.css";
 
-function Assets() {
-    const [assets, setAssets] = useState([
-        {
-            id: "IT-2026-001",
-            name: "Dell OptiPlex 7090",
-            category: "Desktop",
-            status: "Active",
-            assignedTo: "John Smith"
-        },
-        {
-            id: "IT-2026-002",
-            name: "Lenovo ThinkPad E14",
-            category: "Laptop",
-            status: "Active",
-            assignedTo: "Maria Santos"
-        },
-        {
-            id: "IT-2026-003",
-            name: "HP LaserJet Pro",
-            category: "Printer",
-            status: "Maintenance",
-            assignedTo: "IT Department"
-        },
-        {
-            id: "IT-2026-004",
-            name: "Dell UltraSharp U2722D",
-            category: "Monitor",
-            status: "Active",
-            assignedTo: "James Wilson"
-        },
-        {
-            id: "IT-2026-005",
-            name: "Cisco Business Router",
-            category: "Network",
-            status: "Unavailable",
-            assignedTo: "IT Department"
-        }
-    ]);
+const API_URL = "http://localhost:5000/api/assets";
 
+function Assets() {
+    const [assets, setAssets] = useState([]);
     const [search, setSearch] = useState("");
     const [showModal, setShowModal] = useState(false);
     const [editingAsset, setEditingAsset] = useState(null);
+    const [loading, setLoading] = useState(true);
 
     const [form, setForm] = useState({
-        name: "",
+        assetTag: "",
+        assetName: "",
         category: "Desktop",
+        brand: "",
+        model: "",
+        serialNumber: "",
         status: "Active",
-        assignedTo: ""
+        assignedTo: "",
+        purchaseDate: ""
     });
 
+    const loadAssets = async () => {
+        try {
+            const response = await fetch(API_URL);
+            const data = await response.json();
+
+            if (data.success) {
+                setAssets(data.assets);
+            }
+        } catch (error) {
+            console.error("Failed to load assets:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadAssets();
+    }, []);
+
     const activeAssets = assets.filter(
-        (asset) => asset.status === "Active"
+        (asset) => asset.Status === "Active"
     ).length;
 
     const maintenanceAssets = assets.filter(
-        (asset) => asset.status === "Maintenance"
+        (asset) => asset.Status === "Maintenance"
     ).length;
 
     const unavailableAssets = assets.filter(
-        (asset) => asset.status === "Unavailable"
+        (asset) => asset.Status === "Unavailable"
     ).length;
 
     const filteredAssets = assets.filter((asset) => {
@@ -71,11 +61,11 @@ function Assets() {
         }
 
         return (
-            asset.id.toLowerCase().includes(keyword) ||
-            asset.name.toLowerCase().includes(keyword) ||
-            asset.category.toLowerCase().includes(keyword) ||
-            asset.status.toLowerCase().includes(keyword) ||
-            asset.assignedTo.toLowerCase().includes(keyword)
+            String(asset.AssetTag || "").toLowerCase().includes(keyword) ||
+            String(asset.AssetName || "").toLowerCase().includes(keyword) ||
+            String(asset.Category || "").toLowerCase().includes(keyword) ||
+            String(asset.Status || "").toLowerCase().includes(keyword) ||
+            String(asset.AssignedTo || "").toLowerCase().includes(keyword)
         );
     });
 
@@ -98,10 +88,15 @@ function Assets() {
         setEditingAsset(null);
 
         setForm({
-            name: "",
+            assetTag: "",
+            assetName: "",
             category: "Desktop",
+            brand: "",
+            model: "",
+            serialNumber: "",
             status: "Active",
-            assignedTo: ""
+            assignedTo: "",
+            purchaseDate: ""
         });
 
         setShowModal(true);
@@ -111,13 +106,17 @@ function Assets() {
         setEditingAsset(asset);
 
         setForm({
-            name: asset.name,
-            category: asset.category,
-            status: asset.status,
-            assignedTo:
-                asset.assignedTo === "Unassigned"
-                    ? ""
-                    : asset.assignedTo
+            assetTag: asset.AssetTag || "",
+            assetName: asset.AssetName || "",
+            category: asset.Category || "Desktop",
+            brand: asset.Brand || "",
+            model: asset.Model || "",
+            serialNumber: asset.SerialNumber || "",
+            status: asset.Status || "Active",
+            assignedTo: asset.AssignedTo || "",
+            purchaseDate: asset.PurchaseDate
+                ? asset.PurchaseDate.substring(0, 10)
+                : ""
         });
 
         setShowModal(true);
@@ -137,70 +136,51 @@ function Assets() {
         }));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
 
-        const assetName = form.name.trim();
-
-        if (!assetName) {
+        if (!form.assetName.trim()) {
             return;
         }
 
-        const assignedPerson =
-            form.assignedTo.trim() || "Unassigned";
+        const payload = {
+            ...form,
+            assetName: form.assetName.trim(),
+            assignedTo: form.assignedTo.trim() || null
+        };
 
-        if (editingAsset) {
-            setAssets((previous) =>
-                previous.map((asset) =>
-                    asset.id === editingAsset.id
-                        ? {
-                              ...asset,
-                              name: assetName,
-                              category: form.category,
-                              status: form.status,
-                              assignedTo: assignedPerson
-                          }
-                        : asset
-                )
-            );
-        } else {
-            const highestNumber = assets.reduce(
-                (highest, asset) => {
-                    const number = Number(
-                        asset.id.split("-").pop()
-                    );
-
-                    return number > highest
-                        ? number
-                        : highest;
-                },
-                0
+        try {
+            const response = await fetch(
+                editingAsset
+                    ? `${API_URL}/${editingAsset.Id}`
+                    : API_URL,
+                {
+                    method: editingAsset ? "PUT" : "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(payload)
+                }
             );
 
-            const newId = `IT-2026-${String(
-                highestNumber + 1
-            ).padStart(3, "0")}`;
+            const data = await response.json();
 
-            const newAsset = {
-                id: newId,
-                name: assetName,
-                category: form.category,
-                status: form.status,
-                assignedTo: assignedPerson
-            };
+            if (!response.ok || !data.success) {
+                alert(data.message || "Failed to save asset");
+                return;
+            }
 
-            setAssets((previous) => [
-                ...previous,
-                newAsset
-            ]);
+            await loadAssets();
+            closeModal();
+        } catch (error) {
+            console.error("Save asset error:", error);
+            alert("Failed to connect to the server");
         }
-
-        closeModal();
     };
 
-    const handleDelete = (id) => {
+    const handleDelete = async (id) => {
         const asset = assets.find(
-            (item) => item.id === id
+            (item) => item.Id === id
         );
 
         if (!asset) {
@@ -208,16 +188,33 @@ function Assets() {
         }
 
         const confirmed = window.confirm(
-            `Are you sure you want to delete ${asset.name}?`
+            `Are you sure you want to delete ${asset.AssetName}?`
         );
 
         if (!confirmed) {
             return;
         }
 
-        setAssets((previous) =>
-            previous.filter((item) => item.id !== id)
-        );
+        try {
+            const response = await fetch(
+                `${API_URL}/${id}`,
+                {
+                    method: "DELETE"
+                }
+            );
+
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                alert(data.message || "Failed to delete asset");
+                return;
+            }
+
+            await loadAssets();
+        } catch (error) {
+            console.error("Delete asset error:", error);
+            alert("Failed to connect to the server");
+        }
     };
 
     return (
@@ -371,98 +368,106 @@ function Assets() {
                         <span>Actions</span>
                     </div>
 
-                    {filteredAssets.map((asset) => (
-                        <div
-                            className="assets-table-row"
-                            key={asset.id}
-                        >
+                    {loading ? (
+                        <div className="assets-empty">
+                            <strong>Loading assets...</strong>
+                        </div>
+                    ) : (
+                        filteredAssets.map((asset) => (
+                            <div
+                                className="assets-table-row"
+                                key={asset.Id}
+                            >
 
-                            <div className="asset-info">
+                                <div className="asset-info">
 
-                                <div
-                                    className={`asset-type-icon ${asset.category
-                                        .toLowerCase()
-                                        .replace(/\s+/g, "-")}`}
-                                >
-                                    {getAssetIcon(
-                                        asset.category
-                                    )}
+                                    <div
+                                        className={`asset-type-icon ${String(
+                                            asset.Category || ""
+                                        )
+                                            .toLowerCase()
+                                            .replace(/\s+/g, "-")}`}
+                                    >
+                                        {getAssetIcon(
+                                            asset.Category
+                                        )}
+                                    </div>
+
+                                    <div>
+                                        <strong>
+                                            {asset.AssetName}
+                                        </strong>
+
+                                        <small>
+                                            {asset.AssetTag}
+                                        </small>
+                                    </div>
+
+                                </div>
+
+                                <div className="asset-category">
+                                    {asset.Category}
                                 </div>
 
                                 <div>
-                                    <strong>
-                                        {asset.name}
-                                    </strong>
+                                    <span
+                                        className={`asset-status ${
+                                            asset.Status === "Active"
+                                                ? "status-active"
+                                                : asset.Status === "Maintenance"
+                                                ? "status-maintenance"
+                                                : "status-unavailable"
+                                        }`}
+                                    >
+                                        <span className="status-dot"></span>
+                                        {asset.Status}
+                                    </span>
+                                </div>
 
-                                    <small>
-                                        {asset.id}
-                                    </small>
+                                <div className="asset-assigned">
+                                    {asset.AssignedTo || "Unassigned"}
+                                </div>
+
+                                <div className="asset-actions">
+
+                                    <button
+                                        type="button"
+                                        className="asset-edit-btn"
+                                        onClick={() =>
+                                            openEditModal(asset)
+                                        }
+                                    >
+                                        Edit
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        className="asset-delete-btn"
+                                        onClick={() =>
+                                            handleDelete(asset.Id)
+                                        }
+                                    >
+                                        Delete
+                                    </button>
+
                                 </div>
 
                             </div>
+                        ))
+                    )}
 
-                            <div className="asset-category">
-                                {asset.category}
-                            </div>
+                    {!loading &&
+                        filteredAssets.length === 0 && (
+                            <div className="assets-empty">
+                                <strong>
+                                    No assets found
+                                </strong>
 
-                            <div>
-                                <span
-                                    className={`asset-status ${
-                                        asset.status === "Active"
-                                            ? "status-active"
-                                            : asset.status ===
-                                              "Maintenance"
-                                            ? "status-maintenance"
-                                            : "status-unavailable"
-                                    }`}
-                                >
-                                    <span className="status-dot"></span>
-                                    {asset.status}
+                                <span>
+                                    Try changing your search.
                                 </span>
                             </div>
-
-                            <div className="asset-assigned">
-                                {asset.assignedTo}
-                            </div>
-
-                            <div className="asset-actions">
-
-                                <button
-                                    type="button"
-                                    className="asset-edit-btn"
-                                    onClick={() =>
-                                        openEditModal(asset)
-                                    }
-                                >
-                                    Edit
-                                </button>
-
-                                <button
-                                    type="button"
-                                    className="asset-delete-btn"
-                                    onClick={() =>
-                                        handleDelete(asset.id)
-                                    }
-                                >
-                                    Delete
-                                </button>
-
-                            </div>
-
-                        </div>
-                    ))}
-
-                    {filteredAssets.length === 0 && (
-                        <div className="assets-empty">
-                            <strong>
-                                No assets found
-                            </strong>
-
-                            <span>
-                                Try changing your search.
-                            </span>
-                        </div>
-                    )}
+                        )}
 
                 </div>
 
@@ -472,9 +477,7 @@ function Assets() {
                 <div
                     className="asset-modal-overlay"
                     onMouseDown={(e) => {
-                        if (
-                            e.target === e.currentTarget
-                        ) {
+                        if (e.target === e.currentTarget) {
                             closeModal();
                         }
                     }}
@@ -514,7 +517,21 @@ function Assets() {
                         >
 
                             <div className="asset-form-group">
+                                <label htmlFor="asset-tag">
+                                    Asset Tag
+                                </label>
 
+                                <input
+                                    id="asset-tag"
+                                    type="text"
+                                    name="assetTag"
+                                    value={form.assetTag}
+                                    onChange={handleInputChange}
+                                    placeholder="e.g. IT-2026-002"
+                                />
+                            </div>
+
+                            <div className="asset-form-group">
                                 <label htmlFor="asset-name">
                                     Asset Name
                                 </label>
@@ -522,19 +539,17 @@ function Assets() {
                                 <input
                                     id="asset-name"
                                     type="text"
-                                    name="name"
-                                    value={form.name}
+                                    name="assetName"
+                                    value={form.assetName}
                                     onChange={handleInputChange}
                                     placeholder="e.g. Dell OptiPlex 7090"
                                     required
                                 />
-
                             </div>
 
                             <div className="asset-form-row">
 
                                 <div className="asset-form-group">
-
                                     <label htmlFor="asset-category">
                                         Category
                                     </label>
@@ -548,28 +563,22 @@ function Assets() {
                                         <option value="Desktop">
                                             Desktop
                                         </option>
-
                                         <option value="Laptop">
                                             Laptop
                                         </option>
-
                                         <option value="Printer">
                                             Printer
                                         </option>
-
                                         <option value="Monitor">
                                             Monitor
                                         </option>
-
                                         <option value="Network">
                                             Network
                                         </option>
                                     </select>
-
                                 </div>
 
                                 <div className="asset-form-group">
-
                                     <label htmlFor="asset-status">
                                         Status
                                     </label>
@@ -583,34 +592,96 @@ function Assets() {
                                         <option value="Active">
                                             Active
                                         </option>
-
                                         <option value="Maintenance">
                                             Maintenance
                                         </option>
-
                                         <option value="Unavailable">
                                             Unavailable
                                         </option>
                                     </select>
+                                </div>
 
+                            </div>
+
+                            <div className="asset-form-row">
+
+                                <div className="asset-form-group">
+                                    <label htmlFor="asset-brand">
+                                        Brand
+                                    </label>
+
+                                    <input
+                                        id="asset-brand"
+                                        type="text"
+                                        name="brand"
+                                        value={form.brand}
+                                        onChange={handleInputChange}
+                                        placeholder="e.g. Dell"
+                                    />
+                                </div>
+
+                                <div className="asset-form-group">
+                                    <label htmlFor="asset-model">
+                                        Model
+                                    </label>
+
+                                    <input
+                                        id="asset-model"
+                                        type="text"
+                                        name="model"
+                                        value={form.model}
+                                        onChange={handleInputChange}
+                                        placeholder="e.g. OptiPlex 7090"
+                                    />
                                 </div>
 
                             </div>
 
                             <div className="asset-form-group">
-
-                                <label htmlFor="asset-assigned">
-                                    Assigned To
+                                <label htmlFor="asset-serial">
+                                    Serial Number
                                 </label>
 
                                 <input
-                                    id="asset-assigned"
+                                    id="asset-serial"
                                     type="text"
-                                    name="assignedTo"
-                                    value={form.assignedTo}
+                                    name="serialNumber"
+                                    value={form.serialNumber}
                                     onChange={handleInputChange}
-                                    placeholder="e.g. John Smith"
+                                    placeholder="e.g. SN-TEST-002"
                                 />
+                            </div>
+
+                            <div className="asset-form-row">
+
+                                <div className="asset-form-group">
+                                    <label htmlFor="asset-assigned">
+                                        Assigned To
+                                    </label>
+
+                                    <input
+                                        id="asset-assigned"
+                                        type="text"
+                                        name="assignedTo"
+                                        value={form.assignedTo}
+                                        onChange={handleInputChange}
+                                        placeholder="e.g. John Smith"
+                                    />
+                                </div>
+
+                                <div className="asset-form-group">
+                                    <label htmlFor="asset-purchase-date">
+                                        Purchase Date
+                                    </label>
+
+                                    <input
+                                        id="asset-purchase-date"
+                                        type="date"
+                                        name="purchaseDate"
+                                        value={form.purchaseDate}
+                                        onChange={handleInputChange}
+                                    />
+                                </div>
 
                             </div>
 
