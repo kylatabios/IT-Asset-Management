@@ -1,6 +1,8 @@
+
 const express = require("express");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const { sql, dbConfig } = require("../config/database");
 
 const router = express.Router();
 
@@ -15,14 +17,36 @@ router.post("/login", async (req, res) => {
             });
         }
 
-        // Single admin account
-        const ADMIN_USERNAME = "admin";
-        const ADMIN_PASSWORD = "admin123";
+        const pool = await sql.connect(dbConfig);
 
-        if (
-            username !== ADMIN_USERNAME ||
-            password !== ADMIN_PASSWORD
-        ) {
+        const result = await pool
+            .request()
+            .input("Email", sql.NVarChar, username)
+            .query(`
+                SELECT
+                    Id,
+                    FullName,
+                    Email,
+                    PasswordHash
+                FROM Users
+                WHERE Email = @Email
+            `);
+
+        if (result.recordset.length === 0) {
+            return res.status(401).json({
+                success: false,
+                message: "Invalid username or password"
+            });
+        }
+
+        const user = result.recordset[0];
+
+        const passwordMatch = await bcrypt.compare(
+            password,
+            user.PasswordHash
+        );
+
+        if (!passwordMatch) {
             return res.status(401).json({
                 success: false,
                 message: "Invalid username or password"
@@ -31,7 +55,8 @@ router.post("/login", async (req, res) => {
 
         const token = jwt.sign(
             {
-                username: ADMIN_USERNAME,
+                id: user.Id,
+                email: user.Email,
                 role: "admin"
             },
             process.env.JWT_SECRET,
@@ -45,11 +70,12 @@ router.post("/login", async (req, res) => {
             message: "Login successful",
             token,
             user: {
-                username: ADMIN_USERNAME,
+                id: user.Id,
+                fullName: user.FullName,
+                email: user.Email,
                 role: "admin"
             }
         });
-
     } catch (error) {
         console.error("Login error:", error);
 
@@ -62,3 +88,4 @@ router.post("/login", async (req, res) => {
 });
 
 module.exports = router;
+

@@ -1,3 +1,4 @@
+
 const express = require("express");
 const bcrypt = require("bcrypt");
 const { sql, dbConfig } = require("../config/database");
@@ -64,21 +65,35 @@ router.post("/", async (req, res) => {
 
         const passwordHash = await bcrypt.hash(password, 10);
 
-        await pool
+        const result = await pool
             .request()
             .input("FullName", sql.NVarChar, fullName)
             .input("Email", sql.NVarChar, email)
             .input("PasswordHash", sql.NVarChar, passwordHash)
             .query(`
                 INSERT INTO Users
-                (FullName, Email, PasswordHash)
+                (
+                    FullName,
+                    Email,
+                    PasswordHash
+                )
+                OUTPUT
+                    INSERTED.Id,
+                    INSERTED.FullName,
+                    INSERTED.Email,
+                    INSERTED.CreatedAt
                 VALUES
-                (@FullName, @Email, @PasswordHash)
+                (
+                    @FullName,
+                    @Email,
+                    @PasswordHash
+                )
             `);
 
         res.status(201).json({
             success: true,
-            message: "User created successfully"
+            message: "User created successfully",
+            user: result.recordset[0]
         });
     } catch (error) {
         console.error("Create user error:", error);
@@ -86,6 +101,118 @@ router.post("/", async (req, res) => {
         res.status(500).json({
             success: false,
             message: "Failed to create user",
+            error: error.message
+        });
+    }
+});
+
+router.put("/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { fullName, email, password } = req.body;
+
+        if (!fullName || !email) {
+            return res.status(400).json({
+                success: false,
+                message: "Full name and email are required"
+            });
+        }
+
+        const pool = await sql.connect(dbConfig);
+
+        const existingUser = await pool
+            .request()
+            .input("Id", sql.Int, Number(id))
+            .query(`
+                SELECT Id
+                FROM Users
+                WHERE Id = @Id
+            `);
+
+        if (existingUser.recordset.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+        const emailCheck = await pool
+            .request()
+            .input("Id", sql.Int, Number(id))
+            .input("Email", sql.NVarChar, email)
+            .query(`
+                SELECT Id
+                FROM Users
+                WHERE Email = @Email
+                AND Id <> @Id
+            `);
+
+        if (emailCheck.recordset.length > 0) {
+            return res.status(409).json({
+                success: false,
+                message: "Email is already registered"
+            });
+        }
+
+        if (password) {
+            const passwordHash = await bcrypt.hash(password, 10);
+
+            const result = await pool
+                .request()
+                .input("Id", sql.Int, Number(id))
+                .input("FullName", sql.NVarChar, fullName)
+                .input("Email", sql.NVarChar, email)
+                .input("PasswordHash", sql.NVarChar, passwordHash)
+                .query(`
+                    UPDATE Users
+                    SET
+                        FullName = @FullName,
+                        Email = @Email,
+                        PasswordHash = @PasswordHash
+                    OUTPUT
+                        INSERTED.Id,
+                        INSERTED.FullName,
+                        INSERTED.Email,
+                        INSERTED.CreatedAt
+                    WHERE Id = @Id
+                `);
+
+            return res.json({
+                success: true,
+                message: "User updated successfully",
+                user: result.recordset[0]
+            });
+        }
+
+        const result = await pool
+            .request()
+            .input("Id", sql.Int, Number(id))
+            .input("FullName", sql.NVarChar, fullName)
+            .input("Email", sql.NVarChar, email)
+            .query(`
+                UPDATE Users
+                SET
+                    FullName = @FullName,
+                    Email = @Email
+                OUTPUT
+                    INSERTED.Id,
+                    INSERTED.FullName,
+                    INSERTED.Email,
+                    INSERTED.CreatedAt
+                WHERE Id = @Id
+            `);
+
+        res.json({
+            success: true,
+            message: "User updated successfully",
+            user: result.recordset[0]
+        });
+    } catch (error) {
+        console.error("Update user error:", error);
+
+        res.status(500).json({
+            success: false,
+            message: "Failed to update user",
             error: error.message
         });
     }
@@ -100,10 +227,14 @@ router.delete("/:id", async (req, res) => {
             .input("Id", sql.Int, Number(req.params.id))
             .query(`
                 DELETE FROM Users
+                OUTPUT
+                    DELETED.Id,
+                    DELETED.FullName,
+                    DELETED.Email
                 WHERE Id = @Id
             `);
 
-        if (result.rowsAffected[0] === 0) {
+        if (result.recordset.length === 0) {
             return res.status(404).json({
                 success: false,
                 message: "User not found"
@@ -112,7 +243,8 @@ router.delete("/:id", async (req, res) => {
 
         res.json({
             success: true,
-            message: "User deleted successfully"
+            message: "User deleted successfully",
+            user: result.recordset[0]
         });
     } catch (error) {
         console.error("Delete user error:", error);
@@ -126,3 +258,4 @@ router.delete("/:id", async (req, res) => {
 });
 
 module.exports = router;
+
