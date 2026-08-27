@@ -2,7 +2,7 @@ import {
     BrowserRouter,
     Routes,
     Route,
-    Navigate
+    Navigate,
 } from "react-router-dom";
 
 import "./App.css";
@@ -10,6 +10,14 @@ import "./App.css";
 import Sidebar from "./components/Sidebar";
 import Assets from "./pages/Assets";
 import Users from "./pages/Users";
+import Maintenance from "./pages/Maintenance";
+import Reports from "./pages/Reports";
+import Settings from "./pages/Settings";
+
+
+/* ============================================
+   Login Page
+   ============================================ */
 
 function Login() {
     return (
@@ -17,7 +25,9 @@ function Login() {
             <div className="login-card">
 
                 <div className="brand">
-                    <div className="brand-icon">IT</div>
+                    <div className="brand-icon">
+                        IT
+                    </div>
 
                     <div>
                         <h1>IT Asset Management</h1>
@@ -27,7 +37,9 @@ function Login() {
 
                 <div className="login-header">
                     <h2>Welcome back</h2>
-                    <p>Sign in to access your account.</p>
+                    <p>
+                        Sign in to access your account.
+                    </p>
                 </div>
 
                 <form
@@ -37,7 +49,10 @@ function Login() {
                     }}
                 >
                     <div className="form-group">
-                        <label>Email Address</label>
+                        <label>
+                            Email Address
+                        </label>
+
                         <input
                             type="email"
                             placeholder="Enter your email"
@@ -46,7 +61,10 @@ function Login() {
                     </div>
 
                     <div className="form-group">
-                        <label>Password</label>
+                        <label>
+                            Password
+                        </label>
+
                         <input
                             type="password"
                             placeholder="Enter your password"
@@ -67,13 +85,23 @@ function Login() {
     );
 }
 
+
+/* ============================================
+   Dashboard Home
+   ============================================ */
+
 function DashboardHome() {
     return (
         <div className="dashboard-home">
 
+            {/* Dashboard Header */}
+
             <header className="dashboard-header">
                 <div>
-                    <h1>Dashboard</h1>
+                    <h1>
+                        Dashboard
+                    </h1>
+
                     <p>
                         Overview of your IT asset management system.
                     </p>
@@ -84,57 +112,111 @@ function DashboardHome() {
                 </button>
             </header>
 
+
+            {/* Statistics */}
+
             <section className="stats-grid">
 
                 <div className="stat-card">
-                    <div className="stat-icon blue">A</div>
+                    <div className="stat-icon blue">
+                        A
+                    </div>
 
                     <div>
-                        <span>Total Assets</span>
-                        <h2>128</h2>
-                        <small>All registered assets</small>
+                        <span>
+                            Total Assets
+                        </span>
+
+                        <h2>
+                            128
+                        </h2>
+
+                        <small>
+                            All registered assets
+                        </small>
                     </div>
                 </div>
 
+
                 <div className="stat-card">
-                    <div className="stat-icon green">A</div>
+                    <div className="stat-icon green">
+                        A
+                    </div>
 
                     <div>
-                        <span>Active Assets</span>
-                        <h2>112</h2>
-                        <small>Currently in use</small>
+                        <span>
+                            Active Assets
+                        </span>
+
+                        <h2>
+                            112
+                        </h2>
+
+                        <small>
+                            Currently in use
+                        </small>
                     </div>
                 </div>
 
+
                 <div className="stat-card">
-                    <div className="stat-icon orange">M</div>
+                    <div className="stat-icon orange">
+                        M
+                    </div>
 
                     <div>
-                        <span>Maintenance</span>
-                        <h2>10</h2>
-                        <small>Needs attention</small>
+                        <span>
+                            Maintenance
+                        </span>
+
+                        <h2>
+                            10
+                        </h2>
+
+                        <small>
+                            Needs attention
+                        </small>
                     </div>
                 </div>
 
+
                 <div className="stat-card">
-                    <div className="stat-icon red">U</div>
+                    <div className="stat-icon red">
+                        U
+                    </div>
 
                     <div>
-                        <span>Unavailable</span>
-                        <h2>6</h2>
-                        <small>Not currently available</small>
+                        <span>
+                            Unavailable
+                        </span>
+
+                        <h2>
+                            6
+                        </h2>
+
+                        <small>
+                            Not currently available
+                        </small>
                     </div>
                 </div>
 
             </section>
 
+
+            {/* Dashboard Content */}
+
             <section className="dashboard-content">
+
+                {/* Recent Assets */}
 
                 <div className="content-card">
 
                     <div className="card-header">
                         <div>
-                            <h2>Recent Assets</h2>
+                            <h2>
+                                Recent Assets
+                            </h2>
+
                             <p>
                                 Recently added or updated assets
                             </p>
@@ -148,18 +230,36 @@ function DashboardHome() {
                         </a>
                     </div>
 
+
                     <div className="asset-table">
 
+                        {/* Table Header */}
+
                         <div className="table-row table-head">
-                            <span>Asset</span>
-                            <span>Category</span>
-                            <span>Status</span>
-                            <span>Assigned To</span>
+                            <span>
+                                Asset
+                            </span>
+
+                            <span>
+                                Category
+                            </span>
+
+                            <span>
+                                Status
+                            </span>
+
+                            <span>
+                                Assigned To
+                            </span>
                         </div>
+
+
+                        {/* Asset 1 */}
 
                         <div className="table-row">
 
                             <div className="asset-name">
+
                                 <div className="asset-icon">
                                     PC
                                 </div>
@@ -173,21 +273,30 @@ function DashboardHome() {
                                         IT-2026-001
                                     </small>
                                 </div>
+
                             </div>
 
-                            <span>Desktop</span>
+                            <span>
+                                Desktop
+                            </span>
 
                             <span className="status active-status">
                                 Active
                             </span>
 
-                            <span>John Smith</span>
+                            <span>
+                                John Smith
+                            </span>
 
                         </div>
+
+
+                        {/* Asset 2 */}
 
                         <div className="table-row">
 
                             <div className="asset-name">
+
                                 <div className="asset-icon">
                                     LT
                                 </div>
@@ -201,21 +310,30 @@ function DashboardHome() {
                                         IT-2026-002
                                     </small>
                                 </div>
+
                             </div>
 
-                            <span>Laptop</span>
+                            <span>
+                                Laptop
+                            </span>
 
                             <span className="status active-status">
                                 Active
                             </span>
 
-                            <span>Maria Santos</span>
+                            <span>
+                                Maria Santos
+                            </span>
 
                         </div>
+
+
+                        {/* Asset 3 */}
 
                         <div className="table-row">
 
                             <div className="asset-name">
+
                                 <div className="asset-icon">
                                     PR
                                 </div>
@@ -229,15 +347,20 @@ function DashboardHome() {
                                         IT-2026-003
                                     </small>
                                 </div>
+
                             </div>
 
-                            <span>Printer</span>
+                            <span>
+                                Printer
+                            </span>
 
                             <span className="status maintenance-status">
                                 Maintenance
                             </span>
 
-                            <span>IT Department</span>
+                            <span>
+                                IT Department
+                            </span>
 
                         </div>
 
@@ -245,38 +368,58 @@ function DashboardHome() {
 
                 </div>
 
+
+                {/* Quick Actions */}
+
                 <div className="content-card quick-actions">
 
                     <div className="card-header">
+
                         <div>
-                            <h2>Quick Actions</h2>
+                            <h2>
+                                Quick Actions
+                            </h2>
+
                             <p>
                                 Common management tasks
                             </p>
                         </div>
+
                     </div>
+
 
                     <a
                         href="/assets"
                         className="quick-action-btn"
                     >
-                        <span>+</span>
+                        <span>
+                            +
+                        </span>
+
                         Add New Asset
                     </a>
+
 
                     <a
                         href="/users"
                         className="quick-action-btn"
                     >
-                        <span>U</span>
+                        <span>
+                            U
+                        </span>
+
                         Manage Users
                     </a>
+
 
                     <a
                         href="/reports"
                         className="quick-action-btn"
                     >
-                        <span>R</span>
+                        <span>
+                            R
+                        </span>
+
                         Generate Report
                     </a>
 
@@ -288,6 +431,11 @@ function DashboardHome() {
     );
 }
 
+
+/* ============================================
+   System Layout
+   ============================================ */
+
 function SystemLayout() {
     return (
         <div className="dashboard-page">
@@ -295,58 +443,70 @@ function SystemLayout() {
             <Sidebar />
 
             <main className="dashboard-main">
+
                 <Routes>
+
+                    {/* Dashboard */}
 
                     <Route
                         path="/dashboard"
-                        element={<DashboardHome />}
+                        element={
+                            <DashboardHome />
+                        }
                     />
+
+
+                    {/* Assets */}
 
                     <Route
                         path="/assets"
-                        element={<Assets />}
+                        element={
+                            <Assets />
+                        }
                     />
+
+
+                    {/* Users */}
 
                     <Route
                         path="/users"
-                        element={<Users />}
+                        element={
+                            <Users />
+                        }
                     />
+
+
+                    {/* Maintenance */}
 
                     <Route
                         path="/maintenance"
                         element={
-                            <div className="page-placeholder">
-                                <h1>Maintenance</h1>
-                                <p>
-                                    Maintenance management page.
-                                </p>
-                            </div>
+                            <Maintenance />
                         }
                     />
+
+
+                    {/* Reports */}
 
                     <Route
                         path="/reports"
                         element={
-                            <div className="page-placeholder">
-                                <h1>Reports</h1>
-                                <p>
-                                    Reports management page.
-                                </p>
-                            </div>
+                            <Reports />
                         }
                     />
+
+
+                    {/* Settings */}
 
                     <Route
                         path="/settings"
                         element={
-                            <div className="page-placeholder">
-                                <h1>Settings</h1>
-                                <p>
-                                    System settings page.
-                                </p>
-                            </div>
+                            <Settings />
                         }
                     />
+
+
+                    {/* Unknown route */}
 
                     <Route
                         path="*"
@@ -359,11 +519,17 @@ function SystemLayout() {
                     />
 
                 </Routes>
+
             </main>
 
         </div>
     );
 }
+
+
+/* ============================================
+   Main App
+   ============================================ */
 
 function App() {
     return (
@@ -371,14 +537,23 @@ function App() {
 
             <Routes>
 
+                {/* Login */}
+
                 <Route
                     path="/"
-                    element={<Login />}
+                    element={
+                        <Login />
+                    }
                 />
+
+
+                {/* System */}
 
                 <Route
                     path="/*"
-                    element={<SystemLayout />}
+                    element={
+                        <SystemLayout />
+                    }
                 />
 
             </Routes>
@@ -386,5 +561,6 @@ function App() {
         </BrowserRouter>
     );
 }
+
 
 export default App;
