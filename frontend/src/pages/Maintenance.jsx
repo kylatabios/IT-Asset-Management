@@ -1,38 +1,22 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./Maintenance.css";
 
+const API_URL = "http://localhost:5000/api/maintenance";
+const ASSETS_API_URL = "http://localhost:5000/api/assets";
+
 function Maintenance() {
-    const [records, setRecords] = useState([
-        {
-            id: 1,
-            asset: "HP LaserJet Pro",
-            assetId: "IT-2026-003",
-            type: "Repair",
-            assignedTo: "IT Department",
-            date: "2026-08-20",
-            status: "In Progress"
-        },
-        {
-            id: 2,
-            asset: "Dell OptiPlex 7090",
-            assetId: "IT-2026-001",
-            type: "Preventive",
-            assignedTo: "John Smith",
-            date: "2026-08-18",
-            status: "Completed"
-        },
-        {
-            id: 3,
-            asset: "Cisco Business Router",
-            assetId: "IT-2026-005",
-            type: "Inspection",
-            assignedTo: "IT Department",
-            date: "2026-08-15",
-            status: "Pending"
-        }
-    ]);
+    const [records, setRecords] = useState([]);
+    const [assets, setAssets] = useState([]);
 
     const [showModal, setShowModal] = useState(false);
+
+    const [loading, setLoading] = useState(true);
+    const [loadingAssets, setLoadingAssets] = useState(false);
+
+    const [saving, setSaving] = useState(false);
+    const [deletingId, setDeletingId] = useState(null);
+
+    const [error, setError] = useState("");
 
     const [form, setForm] = useState({
         asset: "",
@@ -43,17 +27,91 @@ function Maintenance() {
         status: "Pending"
     });
 
+    useEffect(() => {
+        fetchMaintenance();
+        fetchAssets();
+    }, []);
+
+    const fetchMaintenance = async () => {
+        try {
+            setLoading(true);
+            setError("");
+
+            const response = await fetch(API_URL);
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                throw new Error(
+                    data.message || "Failed to load maintenance records"
+                );
+            }
+
+            setRecords(data.maintenance || []);
+        } catch (error) {
+            console.error("Fetch maintenance error:", error);
+            setError("Failed to load maintenance records.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchAssets = async () => {
+        try {
+            setLoadingAssets(true);
+
+            const response = await fetch(ASSETS_API_URL);
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                throw new Error(
+                    data.message || "Failed to load assets"
+                );
+            }
+
+            setAssets(data.assets || []);
+        } catch (error) {
+            console.error("Fetch assets error:", error);
+            setError("Failed to load assets.");
+        } finally {
+            setLoadingAssets(false);
+        }
+    };
+
     const completed = records.filter(
-        (item) => item.status === "Completed"
+        (item) => item.Status === "Completed"
     ).length;
 
     const inProgress = records.filter(
-        (item) => item.status === "In Progress"
+        (item) => item.Status === "In Progress"
     ).length;
 
     const pending = records.filter(
-        (item) => item.status === "Pending"
+        (item) => item.Status === "Pending"
     ).length;
+
+    const handleAssetChange = (e) => {
+        const assetTag = e.target.value;
+
+        const selectedAsset = assets.find(
+            (asset) => asset.AssetTag === assetTag
+        );
+
+        if (!selectedAsset) {
+            setForm((previous) => ({
+                ...previous,
+                asset: "",
+                assetId: ""
+            }));
+
+            return;
+        }
+
+        setForm((previous) => ({
+            ...previous,
+            asset: selectedAsset.AssetName,
+            assetId: selectedAsset.AssetTag
+        }));
+    };
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -64,33 +122,7 @@ function Maintenance() {
         }));
     };
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-
-        if (
-            !form.asset.trim() ||
-            !form.assetId.trim() ||
-            !form.assignedTo.trim() ||
-            !form.date
-        ) {
-            return;
-        }
-
-        const newRecord = {
-            id:
-                records.length > 0
-                    ? Math.max(...records.map((item) => item.id)) + 1
-                    : 1,
-            asset: form.asset.trim(),
-            assetId: form.assetId.trim(),
-            type: form.type,
-            assignedTo: form.assignedTo.trim(),
-            date: form.date,
-            status: form.status
-        };
-
-        setRecords((previous) => [...previous, newRecord]);
-
+    const resetForm = () => {
         setForm({
             asset: "",
             assetId: "",
@@ -99,24 +131,141 @@ function Maintenance() {
             date: "",
             status: "Pending"
         });
-
-        setShowModal(false);
     };
 
-    const handleDelete = (id) => {
-        const record = records.find((item) => item.id === id);
+    const openAddModal = () => {
+        setError("");
+        resetForm();
+        setShowModal(true);
+
+        if (assets.length === 0) {
+            fetchAssets();
+        }
+    };
+
+    const closeModal = () => {
+        if (saving) return;
+
+        setShowModal(false);
+        resetForm();
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+
+        if (
+            !form.asset ||
+            !form.assetId ||
+            !form.assignedTo.trim() ||
+            !form.date
+        ) {
+            setError("Please complete all required fields.");
+            return;
+        }
+
+        try {
+            setSaving(true);
+            setError("");
+
+            const response = await fetch(API_URL, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    asset: form.asset,
+                    assetId: form.assetId,
+                    type: form.type,
+                    assignedTo: form.assignedTo.trim(),
+                    date: form.date,
+                    status: form.status
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                throw new Error(
+                    data.message ||
+                    "Failed to create maintenance record"
+                );
+            }
+
+            setRecords((previous) => [
+                data.maintenance,
+                ...previous
+            ]);
+
+            resetForm();
+            setShowModal(false);
+
+        } catch (error) {
+            console.error(
+                "Create maintenance error:",
+                error
+            );
+
+            setError(
+                error.message ||
+                "Failed to create maintenance record."
+            );
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleDelete = async (id) => {
+        const record = records.find(
+            (item) => item.Id === id
+        );
 
         if (!record) return;
 
         const confirmed = window.confirm(
-            `Delete maintenance record for ${record.asset}?`
+            `Delete maintenance record for ${record.Asset}?`
         );
 
         if (!confirmed) return;
 
-        setRecords((previous) =>
-            previous.filter((item) => item.id !== id)
-        );
+        try {
+            setDeletingId(id);
+            setError("");
+
+            const response = await fetch(
+                `${API_URL}/${id}`,
+                {
+                    method: "DELETE"
+                }
+            );
+
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                throw new Error(
+                    data.message ||
+                    "Failed to delete maintenance record"
+                );
+            }
+
+            setRecords((previous) =>
+                previous.filter(
+                    (item) => item.Id !== id
+                )
+            );
+
+        } catch (error) {
+            console.error(
+                "Delete maintenance error:",
+                error
+            );
+
+            setError(
+                error.message ||
+                "Failed to delete maintenance record."
+            );
+        } finally {
+            setDeletingId(null);
+        }
     };
 
     const getStatusClass = (status) => {
@@ -131,6 +280,18 @@ function Maintenance() {
         return "status-pending";
     };
 
+    const getTypeIcon = (type) => {
+        if (type === "Repair") {
+            return "R";
+        }
+
+        if (type === "Preventive") {
+            return "P";
+        }
+
+        return "I";
+    };
+
     return (
         <main className="maintenance-page">
 
@@ -138,6 +299,7 @@ function Maintenance() {
             <header className="maintenance-header">
                 <div>
                     <h1>Maintenance</h1>
+
                     <p>
                         Track and manage asset maintenance records.
                     </p>
@@ -145,12 +307,28 @@ function Maintenance() {
 
                 <button
                     className="maintenance-primary-btn"
-                    onClick={() => setShowModal(true)}
+                    onClick={openAddModal}
                 >
                     <span>+</span>
                     Add Maintenance
                 </button>
             </header>
+
+            {/* ERROR */}
+            {error && (
+                <div
+                    style={{
+                        marginBottom: "20px",
+                        padding: "12px 16px",
+                        borderRadius: "10px",
+                        background: "#fee2e2",
+                        color: "#b91c1c",
+                        fontSize: "14px"
+                    }}
+                >
+                    {error}
+                </div>
+            )}
 
             {/* STATISTICS */}
             <section className="maintenance-stats">
@@ -162,8 +340,14 @@ function Maintenance() {
 
                     <div>
                         <span>Completed</span>
-                        <strong>{completed}</strong>
-                        <small>Completed records</small>
+
+                        <strong>
+                            {completed}
+                        </strong>
+
+                        <small>
+                            Completed records
+                        </small>
                     </div>
                 </div>
 
@@ -174,8 +358,14 @@ function Maintenance() {
 
                     <div>
                         <span>In Progress</span>
-                        <strong>{inProgress}</strong>
-                        <small>Currently being handled</small>
+
+                        <strong>
+                            {inProgress}
+                        </strong>
+
+                        <small>
+                            Currently being handled
+                        </small>
                     </div>
                 </div>
 
@@ -186,8 +376,14 @@ function Maintenance() {
 
                     <div>
                         <span>Pending</span>
-                        <strong>{pending}</strong>
-                        <small>Waiting for action</small>
+
+                        <strong>
+                            {pending}
+                        </strong>
+
+                        <small>
+                            Waiting for action
+                        </small>
                     </div>
                 </div>
 
@@ -197,8 +393,12 @@ function Maintenance() {
             <section className="maintenance-card">
 
                 <div className="maintenance-card-header">
+
                     <div>
-                        <h2>Maintenance Records</h2>
+                        <h2>
+                            Maintenance Records
+                        </h2>
+
                         <p>
                             View and manage asset maintenance activities.
                         </p>
@@ -207,9 +407,10 @@ function Maintenance() {
                     <div className="maintenance-record-count">
                         {records.length} Records
                     </div>
+
                 </div>
 
-                {/* DESKTOP TABLE */}
+                {/* TABLE */}
                 <div className="maintenance-table">
 
                     <div className="maintenance-table-head">
@@ -221,231 +422,372 @@ function Maintenance() {
                         <span>Actions</span>
                     </div>
 
-                    {records.length === 0 ? (
+                    {loading ? (
+
                         <div className="maintenance-empty">
+
                             <div className="maintenance-empty-icon">
                                 M
                             </div>
 
-                            <strong>No maintenance records</strong>
+                            <strong>
+                                Loading maintenance records...
+                            </strong>
+
+                            <span>
+                                Please wait while the records are being loaded.
+                            </span>
+
+                        </div>
+
+                    ) : records.length === 0 ? (
+
+                        <div className="maintenance-empty">
+
+                            <div className="maintenance-empty-icon">
+                                M
+                            </div>
+
+                            <strong>
+                                No maintenance records
+                            </strong>
 
                             <span>
                                 Add a maintenance record to get started.
                             </span>
 
                             <button
-                                onClick={() => setShowModal(true)}
+                                onClick={openAddModal}
                             >
                                 Add Maintenance
                             </button>
+
                         </div>
+
                     ) : (
+
                         records.map((record) => (
+
                             <div
                                 className="maintenance-row"
-                                key={record.id}
+                                key={record.Id}
                             >
 
+                                {/* ASSET */}
                                 <div className="maintenance-asset">
+
                                     <div className="maintenance-asset-icon">
-                                        {record.type === "Repair"
-                                            ? "R"
-                                            : record.type === "Preventive"
-                                                ? "P"
-                                                : "I"}
+                                        {getTypeIcon(record.Type)}
                                     </div>
 
                                     <div>
+
                                         <strong>
-                                            {record.asset}
+                                            {record.Asset}
                                         </strong>
 
                                         <small>
-                                            {record.assetId}
+                                            {record.AssetId}
                                         </small>
+
                                     </div>
+
                                 </div>
 
+                                {/* TYPE */}
                                 <div className="maintenance-detail">
+
                                     <span className="mobile-label">
                                         Type
                                     </span>
 
                                     <span>
-                                        {record.type}
+                                        {record.Type}
                                     </span>
+
                                 </div>
 
+                                {/* ASSIGNED TO */}
                                 <div className="maintenance-detail">
+
                                     <span className="mobile-label">
                                         Assigned To
                                     </span>
 
                                     <span>
-                                        {record.assignedTo}
+                                        {record.AssignedTo}
                                     </span>
+
                                 </div>
 
+                                {/* DATE */}
                                 <div className="maintenance-detail">
+
                                     <span className="mobile-label">
                                         Date
                                     </span>
 
                                     <span>
-                                        {record.date}
+                                        {record.Date
+                                            ? record.Date.substring(0, 10)
+                                            : ""}
                                     </span>
+
                                 </div>
 
+                                {/* STATUS */}
                                 <div className="maintenance-detail">
+
                                     <span className="mobile-label">
                                         Status
                                     </span>
 
                                     <span
                                         className={`maintenance-status ${getStatusClass(
-                                            record.status
+                                            record.Status
                                         )}`}
                                     >
                                         <span className="status-dot"></span>
-                                        {record.status}
+
+                                        {record.Status}
                                     </span>
+
                                 </div>
 
+                                {/* ACTIONS */}
                                 <div className="maintenance-actions">
+
                                     <button
                                         className="maintenance-delete-btn"
                                         onClick={() =>
-                                            handleDelete(record.id)
+                                            handleDelete(record.Id)
+                                        }
+                                        disabled={
+                                            deletingId === record.Id
                                         }
                                     >
-                                        Delete
+                                        {deletingId === record.Id
+                                            ? "Deleting..."
+                                            : "Delete"}
                                     </button>
+
                                 </div>
 
                             </div>
+
                         ))
+
                     )}
 
                 </div>
 
             </section>
 
-            {/* MODAL */}
+            {/* ADD MAINTENANCE MODAL */}
             {showModal && (
+
                 <div
                     className="maintenance-modal-overlay"
                     onMouseDown={(e) => {
-                        if (e.target === e.currentTarget) {
-                            setShowModal(false);
+
+                        if (
+                            e.target === e.currentTarget &&
+                            !saving
+                        ) {
+                            closeModal();
                         }
+
                     }}
                 >
 
                     <div className="maintenance-modal">
 
+                        {/* MODAL HEADER */}
                         <div className="maintenance-modal-header">
 
                             <div className="maintenance-modal-title">
+
                                 <div className="maintenance-modal-icon">
                                     M
                                 </div>
 
                                 <div>
-                                    <h2>Add Maintenance</h2>
+
+                                    <h2>
+                                        Add Maintenance
+                                    </h2>
+
                                     <p>
                                         Enter the maintenance details.
                                     </p>
+
                                 </div>
+
                             </div>
 
                             <button
                                 className="maintenance-modal-close"
-                                onClick={() => setShowModal(false)}
+                                onClick={closeModal}
+                                disabled={saving}
                             >
                                 ×
                             </button>
 
                         </div>
 
+                        {/* FORM */}
                         <form
                             className="maintenance-form"
                             onSubmit={handleSubmit}
                         >
 
+                            {/* ASSET */}
                             <div className="maintenance-form-group">
-                                <label>Asset Name</label>
 
-                                <input
-                                    name="asset"
-                                    value={form.asset}
-                                    onChange={handleChange}
-                                    placeholder="e.g. HP LaserJet Pro"
-                                    required
-                                />
-                            </div>
+                                <label>
+                                    Asset
+                                </label>
 
-                            <div className="maintenance-form-group">
-                                <label>Asset ID</label>
-
-                                <input
-                                    name="assetId"
+                                <select
                                     value={form.assetId}
-                                    onChange={handleChange}
-                                    placeholder="e.g. IT-2026-003"
+                                    onChange={handleAssetChange}
                                     required
-                                />
+                                    disabled={
+                                        saving ||
+                                        loadingAssets
+                                    }
+                                >
+
+                                    <option value="">
+                                        {loadingAssets
+                                            ? "Loading assets..."
+                                            : assets.length === 0
+                                                ? "No assets available"
+                                                : "Select an asset"}
+                                    </option>
+
+                                    {assets.map((asset) => (
+
+                                        <option
+                                            key={asset.Id}
+                                            value={asset.AssetTag}
+                                        >
+                                            {asset.AssetName} - {asset.AssetTag}
+                                        </option>
+
+                                    ))}
+
+                                </select>
+
                             </div>
 
+                            {/* SELECTED ASSET */}
+                            {form.assetId && (
+
+                                <div
+                                    style={{
+                                        padding: "12px 14px",
+                                        borderRadius: "10px",
+                                        background: "#f8fafc",
+                                        border: "1px solid #e2e8f0",
+                                        fontSize: "13px",
+                                        color: "#475569"
+                                    }}
+                                >
+
+                                    <strong>
+                                        Selected Asset
+                                    </strong>
+
+                                    <div
+                                        style={{
+                                            marginTop: "4px"
+                                        }}
+                                    >
+                                        {form.asset}
+                                    </div>
+
+                                    <div
+                                        style={{
+                                            marginTop: "2px"
+                                        }}
+                                    >
+                                        Asset Tag: {form.assetId}
+                                    </div>
+
+                                </div>
+
+                            )}
+
+                            {/* TYPE + STATUS */}
                             <div className="maintenance-form-row">
 
                                 <div className="maintenance-form-group">
-                                    <label>Maintenance Type</label>
+
+                                    <label>
+                                        Maintenance Type
+                                    </label>
 
                                     <select
                                         name="type"
                                         value={form.type}
                                         onChange={handleChange}
+                                        disabled={saving}
                                     >
-                                        <option>
+
+                                        <option value="Repair">
                                             Repair
                                         </option>
 
-                                        <option>
+                                        <option value="Preventive">
                                             Preventive
                                         </option>
 
-                                        <option>
+                                        <option value="Inspection">
                                             Inspection
                                         </option>
+
                                     </select>
+
                                 </div>
 
                                 <div className="maintenance-form-group">
-                                    <label>Status</label>
+
+                                    <label>
+                                        Status
+                                    </label>
 
                                     <select
                                         name="status"
                                         value={form.status}
                                         onChange={handleChange}
+                                        disabled={saving}
                                     >
-                                        <option>
+
+                                        <option value="Pending">
                                             Pending
                                         </option>
 
-                                        <option>
+                                        <option value="In Progress">
                                             In Progress
                                         </option>
 
-                                        <option>
+                                        <option value="Completed">
                                             Completed
                                         </option>
+
                                     </select>
+
                                 </div>
 
                             </div>
 
+                            {/* ASSIGNED TO */}
                             <div className="maintenance-form-group">
-                                <label>Assigned To</label>
+
+                                <label>
+                                    Assigned To
+                                </label>
 
                                 <input
                                     name="assignedTo"
@@ -453,11 +795,17 @@ function Maintenance() {
                                     onChange={handleChange}
                                     placeholder="e.g. IT Department"
                                     required
+                                    disabled={saving}
                                 />
+
                             </div>
 
+                            {/* DATE */}
                             <div className="maintenance-form-group">
-                                <label>Maintenance Date</label>
+
+                                <label>
+                                    Maintenance Date
+                                </label>
 
                                 <input
                                     type="date"
@@ -465,17 +813,19 @@ function Maintenance() {
                                     value={form.date}
                                     onChange={handleChange}
                                     required
+                                    disabled={saving}
                                 />
+
                             </div>
 
+                            {/* ACTIONS */}
                             <div className="maintenance-modal-actions">
 
                                 <button
                                     type="button"
                                     className="maintenance-cancel-btn"
-                                    onClick={() =>
-                                        setShowModal(false)
-                                    }
+                                    onClick={closeModal}
+                                    disabled={saving}
                                 >
                                     Cancel
                                 </button>
@@ -483,8 +833,15 @@ function Maintenance() {
                                 <button
                                     type="submit"
                                     className="maintenance-save-btn"
+                                    disabled={
+                                        saving ||
+                                        loadingAssets ||
+                                        !form.assetId
+                                    }
                                 >
-                                    Add Maintenance
+                                    {saving
+                                        ? "Saving..."
+                                        : "Add Maintenance"}
                                 </button>
 
                             </div>
@@ -494,6 +851,7 @@ function Maintenance() {
                     </div>
 
                 </div>
+
             )}
 
         </main>

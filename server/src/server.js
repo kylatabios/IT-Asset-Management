@@ -1,4 +1,3 @@
-
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
@@ -7,6 +6,7 @@ const { sql, dbConfig } = require("./config/database");
 const authRoutes = require("./routes/authRoutes");
 const assetRoutes = require("./routes/assetRoutes");
 const userRoutes = require("./routes/userRoutes");
+const maintenanceRoutes = require("./routes/maintenanceRoutes");
 
 dotenv.config();
 
@@ -19,6 +19,7 @@ app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/assets", assetRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/maintenance", maintenanceRoutes);
 
 app.get("/", (req, res) => {
     res.json({
@@ -53,4 +54,3 @@ app.get("/api/test-db", async (req, res) => {
 app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
 });
-
