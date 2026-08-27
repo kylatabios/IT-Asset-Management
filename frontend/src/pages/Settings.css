@@ -3,13 +3,7 @@
     padding: 32px 40px;
     background: #f5f7fb;
     color: #172033;
-    font-family:
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        Inter,
-        Roboto,
-        sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
 }
 
 .settings-page * {
@@ -43,9 +37,6 @@
 }
 
 .settings-card-header {
-    min-height: 80px;
-    display: flex;
-    align-items: center;
     padding: 20px 24px;
     border-bottom: 1px solid #edf0f4;
 }
@@ -60,6 +51,49 @@
 .settings-card-header p {
     margin: 0;
     color: #8a93a3;
+    font-size: 11px;
+}
+
+.settings-account {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 24px;
+}
+
+.settings-avatar {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: #edf3ff;
+    color: #1d4ed8;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.settings-account-info {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.settings-account strong {
+    color: #263146;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.settings-account span {
+    color: #667085;
+    font-size: 11px;
+}
+
+.settings-account small {
+    color: #9aa2b1;
     font-size: 11px;
 }
 
@@ -93,7 +127,7 @@
     color: #172033;
     font-family: inherit;
     font-size: 13px;
-    transition: 0.2s ease;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .settings-form-group input:hover {
@@ -105,72 +139,8 @@
     box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.08);
 }
 
-.settings-option {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 20px;
-    padding: 16px 0;
-    border-top: 1px solid #edf0f4;
-    border-bottom: 1px solid #edf0f4;
-}
-
-.settings-option strong {
-    display: block;
-    margin-bottom: 4px;
-    color: #263146;
-    font-size: 12px;
-    font-weight: 600;
-}
-
-.settings-option p {
-    margin: 0;
-    color: #8a93a3;
-    font-size: 11px;
-}
-
-.settings-switch {
-    position: relative;
-    width: 42px;
-    height: 24px;
-    flex-shrink: 0;
-}
-
-.settings-switch input {
-    position: absolute;
-    width: 0;
-    height: 0;
-    opacity: 0;
-}
-
-.settings-switch span {
-    position: absolute;
-    inset: 0;
-    border-radius: 999px;
-    background: #d1d5db;
-    cursor: pointer;
-    transition: 0.2s ease;
-}
-
-.settings-switch span::before {
-    content: "";
-    position: absolute;
-    width: 18px;
-    height: 18px;
-    top: 3px;
-    left: 3px;
-    border-radius: 50%;
-    background: #ffffff;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
-    transition: 0.2s ease;
-}
-
-.settings-switch input:checked + span {
-    background: #1d4ed8;
-}
-
-.settings-switch input:checked + span::before {
-    transform: translateX(18px);
+.settings-form-group input::placeholder {
+    color: #a4abb8;
 }
 
 .settings-actions {
@@ -178,12 +148,12 @@
     align-items: center;
     justify-content: flex-end;
     gap: 12px;
-    margin-top: 2px;
+    margin-top: 4px;
 }
 
 .settings-actions button {
     height: 40px;
-    padding: 0 17px;
+    padding: 0 18px;
     border: none;
     border-radius: 8px;
     background: #1d4ed8;
@@ -192,7 +162,7 @@
     font-size: 12px;
     font-weight: 600;
     cursor: pointer;
-    transition: 0.2s ease;
+    transition: background 0.2s ease, transform 0.1s ease;
 }
 
 .settings-actions button:hover {
@@ -209,46 +179,77 @@
     font-weight: 600;
 }
 
-.settings-account {
+.settings-session {
     display: flex;
     align-items: center;
-    gap: 14px;
+    justify-content: space-between;
+    gap: 20px;
     padding: 22px 24px;
 }
 
-.settings-avatar {
-    width: 44px;
-    height: 44px;
-    min-width: 44px;
+.settings-session-info {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 10px;
-    background: #edf3ff;
-    color: #1d4ed8;
-    font-size: 15px;
-    font-weight: 700;
+    flex-direction: column;
+    gap: 4px;
 }
 
-.settings-account strong {
-    display: block;
-    margin-bottom: 3px;
+.settings-session-info strong {
     color: #263146;
     font-size: 13px;
     font-weight: 600;
 }
 
-.settings-account span {
-    display: block;
-    margin-bottom: 3px;
-    color: #667085;
+.settings-session-info span {
+    color: #8a93a3;
     font-size: 11px;
 }
 
-.settings-account small {
-    display: block;
-    color: #9aa2b1;
-    font-size: 10px;
+.settings-logout-btn {
+    height: 38px;
+    padding: 0 18px;
+    border: 1px solid #e1e5eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #c0392b;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.settings-logout-btn:hover {
+    border-color: #f0c5c0;
+    background: #fff7f6;
+}
+
+.settings-password-section {
+    padding: 24px;
+}
+
+.settings-password-title {
+    margin: 0 0 18px;
+    color: #263146;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.settings-password-message {
+    margin: 0 0 16px;
+    padding: 10px 12px;
+    border-radius: 7px;
+    background: #f0fdf4;
+    color: #15803d;
+    font-size: 11px;
+}
+
+.settings-password-error {
+    margin: 0 0 16px;
+    padding: 10px 12px;
+    border-radius: 7px;
+    background: #fef2f2;
+    color: #b91c1c;
+    font-size: 11px;
 }
 
 @media (max-width: 800px) {
@@ -270,11 +271,15 @@
         padding: 18px;
     }
 
+    .settings-account {
+        padding: 18px;
+    }
+
     .settings-form {
         padding: 18px;
     }
 
-    .settings-account {
+    .settings-password-section {
         padding: 18px;
     }
 
@@ -289,5 +294,15 @@
 
     .settings-saved {
         text-align: center;
+    }
+
+    .settings-session {
+        align-items: stretch;
+        flex-direction: column;
+        padding: 18px;
+    }
+
+    .settings-logout-btn {
+        width: 100%;
     }
 }
