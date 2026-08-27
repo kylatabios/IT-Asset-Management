@@ -1,50 +1,142 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./Reports.css";
+
+const ASSETS_API_URL = "http://localhost:5000/api/assets";
+const MAINTENANCE_API_URL = "http://localhost:5000/api/maintenance";
+const USERS_API_URL = "http://localhost:5000/api/users";
 
 function Reports() {
     const [reportType, setReportType] = useState("Asset Report");
 
-    const assets = [
-        {
-            id: "IT-2026-001",
-            name: "Dell OptiPlex 7090",
-            category: "Desktop",
-            status: "Active",
-            assignedTo: "John Smith"
-        },
-        {
-            id: "IT-2026-002",
-            name: "Lenovo ThinkPad E14",
-            category: "Laptop",
-            status: "Active",
-            assignedTo: "Maria Santos"
-        },
-        {
-            id: "IT-2026-003",
-            name: "HP LaserJet Pro",
-            category: "Printer",
-            status: "Maintenance",
-            assignedTo: "IT Department"
-        },
-        {
-            id: "IT-2026-004",
-            name: "Dell UltraSharp U2722D",
-            category: "Monitor",
-            status: "Active",
-            assignedTo: "James Wilson"
-        },
-        {
-            id: "IT-2026-005",
-            name: "Cisco Business Router",
-            category: "Network",
-            status: "Unavailable",
-            assignedTo: "IT Department"
+    const [assets, setAssets] = useState([]);
+    const [maintenance, setMaintenance] = useState([]);
+    const [users, setUsers] = useState([]);
+
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
+
+    useEffect(() => {
+        loadAllData();
+    }, []);
+
+    const loadAllData = async () => {
+        try {
+            setLoading(true);
+            setError("");
+
+            const [
+                assetsResponse,
+                maintenanceResponse,
+                usersResponse
+            ] = await Promise.all([
+                fetch(ASSETS_API_URL),
+                fetch(MAINTENANCE_API_URL),
+                fetch(USERS_API_URL)
+            ]);
+
+            const assetsData = await assetsResponse.json();
+            const maintenanceData = await maintenanceResponse.json();
+            const usersData = await usersResponse.json();
+
+            if (!assetsResponse.ok || !assetsData.success) {
+                throw new Error(
+                    assetsData.message || "Failed to load assets"
+                );
+            }
+
+            if (!maintenanceResponse.ok || !maintenanceData.success) {
+                throw new Error(
+                    maintenanceData.message ||
+                    "Failed to load maintenance records"
+                );
+            }
+
+            if (!usersResponse.ok) {
+                throw new Error("Failed to load users");
+            }
+
+            setAssets(assetsData.assets || []);
+            setMaintenance(maintenanceData.maintenance || []);
+            setUsers(usersData.users || []);
+        } catch (err) {
+            console.error("Reports data error:", err);
+            setError("Failed to load report data.");
+        } finally {
+            setLoading(false);
         }
-    ];
+    };
 
     const generateReport = () => {
         window.print();
     };
+
+    const formatDate = (value) => {
+        if (!value) return "—";
+        return value.substring(0, 10);
+    };
+
+    // Column headers per report type
+    const columnsByType = {
+        "Asset Report": [
+            "Asset ID",
+            "Asset",
+            "Category",
+            "Status",
+            "Assigned To",
+            "Purchase Date"
+        ],
+        "Maintenance Report": [
+            "Asset",
+            "Type",
+            "Assigned To",
+            "Date",
+            "Status"
+        ],
+        "User Report": [
+            "User",
+            "Email",
+            "Date Created"
+        ]
+    };
+
+    const columns = columnsByType[reportType];
+
+    // Row data per report type
+    const rowsByType = {
+        "Asset Report": assets.map((asset) => ({
+            key: asset.Id,
+            cells: [
+                asset.AssetTag,
+                asset.AssetName,
+                asset.Category,
+                asset.Status,
+                asset.AssignedTo || "Unassigned",
+                formatDate(asset.PurchaseDate)
+            ]
+        })),
+        "Maintenance Report": maintenance.map((record) => ({
+            key: record.Id,
+            cells: [
+                record.Asset,
+                record.Type,
+                record.AssignedTo,
+                formatDate(record.Date),
+                record.Status
+            ]
+        })),
+        "User Report": users.map((user) => ({
+            key: user.Id,
+            cells: [
+                user.FullName,
+                user.Email,
+                user.CreatedAt
+                    ? new Date(user.CreatedAt).toLocaleDateString()
+                    : "—"
+            ]
+        }))
+    };
+
+    const rows = rowsByType[reportType];
 
     return (
         <main className="reports-page">
@@ -95,30 +187,55 @@ function Reports() {
                         <p>IT Asset Management System</p>
                     </div>
 
-                    <span>{assets.length} records</span>
+                    <span>{loading ? "..." : `${rows.length} records`}</span>
                 </div>
+
+                {error && (
+                    <div
+                        style={{
+                            margin: "0 0 16px",
+                            padding: "12px 16px",
+                            borderRadius: "10px",
+                            background: "#fee2e2",
+                            color: "#b91c1c",
+                            fontSize: "14px"
+                        }}
+                    >
+                        {error}
+                    </div>
+                )}
 
                 <div className="reports-table">
                     <div className="reports-table-head">
-                        <span>Asset ID</span>
-                        <span>Asset</span>
-                        <span>Category</span>
-                        <span>Status</span>
-                        <span>Assigned To</span>
+                        {columns.map((col) => (
+                            <span key={col}>{col}</span>
+                        ))}
                     </div>
 
-                    {assets.map((asset) => (
-                        <div
-                            className="reports-row"
-                            key={asset.id}
-                        >
-                            <span>{asset.id}</span>
-                            <strong>{asset.name}</strong>
-                            <span>{asset.category}</span>
-                            <span>{asset.status}</span>
-                            <span>{asset.assignedTo}</span>
+                    {loading ? (
+                        <div className="reports-row">
+                            <span>Loading data...</span>
                         </div>
-                    ))}
+                    ) : rows.length === 0 ? (
+                        <div className="reports-row">
+                            <span>No records found.</span>
+                        </div>
+                    ) : (
+                        rows.map((row) => (
+                            <div
+                                className="reports-row"
+                                key={row.key}
+                            >
+                                {row.cells.map((cell, index) => (
+                                    index === 0 ? (
+                                        <strong key={index}>{cell}</strong>
+                                    ) : (
+                                        <span key={index}>{cell}</span>
+                                    )
+                                ))}
+                            </div>
+                        ))
+                    )}
                 </div>
             </section>
         </main>
