@@ -1,5 +1,32 @@
 import { useEffect, useState } from "react";
+import {
+    Table,
+    Card,
+    Row,
+    Col,
+    Statistic,
+    Button,
+    Modal,
+    Form,
+    Input,
+    Select,
+    DatePicker,
+    Tag,
+    Popconfirm,
+    message,
+    Typography,
+    Space
+} from "antd";
+import {
+    PlusOutlined,
+    ToolOutlined,
+    DeleteOutlined
+} from "@ant-design/icons";
+import dayjs from "dayjs";
+
 import "./Maintenance.css";
+
+const { Title, Text } = Typography;
 
 const API_URL = "http://localhost:5000/api/maintenance";
 const ASSETS_API_URL = "http://localhost:5000/api/assets";
@@ -7,35 +34,16 @@ const ASSETS_API_URL = "http://localhost:5000/api/assets";
 function Maintenance() {
     const [records, setRecords] = useState([]);
     const [assets, setAssets] = useState([]);
-
     const [showModal, setShowModal] = useState(false);
-
     const [loading, setLoading] = useState(true);
     const [loadingAssets, setLoadingAssets] = useState(false);
-
     const [saving, setSaving] = useState(false);
-    const [deletingId, setDeletingId] = useState(null);
 
-    const [error, setError] = useState("");
-
-    const [form, setForm] = useState({
-        asset: "",
-        assetId: "",
-        type: "Repair",
-        assignedTo: "",
-        date: "",
-        status: "Pending"
-    });
-
-    useEffect(() => {
-        fetchMaintenance();
-        fetchAssets();
-    }, []);
+    const [form] = Form.useForm();
 
     const fetchMaintenance = async () => {
         try {
             setLoading(true);
-            setError("");
 
             const response = await fetch(API_URL);
             const data = await response.json();
@@ -49,7 +57,7 @@ function Maintenance() {
             setRecords(data.maintenance || []);
         } catch (error) {
             console.error("Fetch maintenance error:", error);
-            setError("Failed to load maintenance records.");
+            message.error("Failed to load maintenance records");
         } finally {
             setLoading(false);
         }
@@ -71,11 +79,16 @@ function Maintenance() {
             setAssets(data.assets || []);
         } catch (error) {
             console.error("Fetch assets error:", error);
-            setError("Failed to load assets.");
+            message.error("Failed to load assets");
         } finally {
             setLoadingAssets(false);
         }
     };
+
+    useEffect(() => {
+        fetchMaintenance();
+        fetchAssets();
+    }, []);
 
     const completed = records.filter(
         (item) => item.Status === "Completed"
@@ -89,150 +102,99 @@ function Maintenance() {
         (item) => item.Status === "Pending"
     ).length;
 
-    const handleAssetChange = (e) => {
-        const assetTag = e.target.value;
+    const openAddModal = async () => {
+        form.resetFields();
 
-        const selectedAsset = assets.find(
-            (asset) => asset.AssetTag === assetTag
-        );
-
-        if (!selectedAsset) {
-            setForm((previous) => ({
-                ...previous,
-                asset: "",
-                assetId: ""
-            }));
-
-            return;
-        }
-
-        setForm((previous) => ({
-            ...previous,
-            asset: selectedAsset.AssetName,
-            assetId: selectedAsset.AssetTag
-        }));
-    };
-
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-
-        setForm((previous) => ({
-            ...previous,
-            [name]: value
-        }));
-    };
-
-    const resetForm = () => {
-        setForm({
-            asset: "",
-            assetId: "",
+        form.setFieldsValue({
+            assetId: undefined,
             type: "Repair",
+            status: "Pending",
             assignedTo: "",
-            date: "",
-            status: "Pending"
+            date: null
         });
-    };
 
-    const openAddModal = () => {
-        setError("");
-        resetForm();
         setShowModal(true);
 
         if (assets.length === 0) {
-            fetchAssets();
+            await fetchAssets();
         }
     };
 
     const closeModal = () => {
-        if (saving) return;
-
-        setShowModal(false);
-        resetForm();
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-
-        if (
-            !form.asset ||
-            !form.assetId ||
-            !form.assignedTo.trim() ||
-            !form.date
-        ) {
-            setError("Please complete all required fields.");
+        if (saving) {
             return;
         }
 
+        setShowModal(false);
+        form.resetFields();
+    };
+
+    const handleSubmit = async (values) => {
+        const selectedAsset = assets.find(
+            (asset) => asset.AssetTag === values.assetId
+        );
+
+        if (!selectedAsset) {
+            message.error("Please select a valid asset");
+            return;
+        }
+
+        const payload = {
+            asset: selectedAsset.AssetName,
+            assetId: selectedAsset.AssetTag,
+            type: values.type,
+            assignedTo: values.assignedTo.trim(),
+            date: values.date.format("YYYY-MM-DD"),
+            status: values.status
+        };
+
         try {
             setSaving(true);
-            setError("");
 
             const response = await fetch(API_URL, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
                 },
-                body: JSON.stringify({
-                    asset: form.asset,
-                    assetId: form.assetId,
-                    type: form.type,
-                    assignedTo: form.assignedTo.trim(),
-                    date: form.date,
-                    status: form.status
-                })
+                body: JSON.stringify(payload)
             });
 
             const data = await response.json();
 
             if (!response.ok || !data.success) {
-                throw new Error(
+                message.error(
                     data.message ||
                     "Failed to create maintenance record"
                 );
+                return;
             }
+
+            message.success("Maintenance record added");
 
             setRecords((previous) => [
                 data.maintenance,
                 ...previous
             ]);
 
-            resetForm();
-            setShowModal(false);
-
+            closeModal();
         } catch (error) {
             console.error(
                 "Create maintenance error:",
                 error
             );
 
-            setError(
-                error.message ||
-                "Failed to create maintenance record."
+            message.error(
+                "Failed to connect to the server"
             );
         } finally {
             setSaving(false);
         }
     };
 
-    const handleDelete = async (id) => {
-        const record = records.find(
-            (item) => item.Id === id
-        );
-
-        if (!record) return;
-
-        const confirmed = window.confirm(
-            `Delete maintenance record for ${record.Asset}?`
-        );
-
-        if (!confirmed) return;
-
+    const handleDelete = async (record) => {
         try {
-            setDeletingId(id);
-            setError("");
-
             const response = await fetch(
-                `${API_URL}/${id}`,
+                `${API_URL}/${record.Id}`,
                 {
                     method: "DELETE"
                 }
@@ -241,620 +203,452 @@ function Maintenance() {
             const data = await response.json();
 
             if (!response.ok || !data.success) {
-                throw new Error(
+                message.error(
                     data.message ||
                     "Failed to delete maintenance record"
                 );
+                return;
             }
+
+            message.success("Maintenance record deleted");
 
             setRecords((previous) =>
                 previous.filter(
-                    (item) => item.Id !== id
+                    (item) => item.Id !== record.Id
                 )
             );
-
         } catch (error) {
             console.error(
                 "Delete maintenance error:",
                 error
             );
 
-            setError(
-                error.message ||
-                "Failed to delete maintenance record."
+            message.error(
+                "Failed to connect to the server"
             );
-        } finally {
-            setDeletingId(null);
         }
     };
 
-    const getStatusClass = (status) => {
+    const getStatusColor = (status) => {
         if (status === "Completed") {
-            return "status-completed";
+            return "success";
         }
 
         if (status === "In Progress") {
-            return "status-progress";
+            return "processing";
         }
 
-        return "status-pending";
+        return "warning";
     };
 
-    const getTypeIcon = (type) => {
+    const getTypeColor = (type) => {
         if (type === "Repair") {
-            return "R";
+            return "error";
         }
 
         if (type === "Preventive") {
-            return "P";
+            return "blue";
         }
 
-        return "I";
+        return "purple";
     };
 
+    const columns = [
+        {
+            title: "Asset",
+            key: "asset",
+            render: (_, record) => (
+                <Space>
+                    <div
+                        style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: 9,
+                            background: "#eef2fb",
+                            color: "#3852a4",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: 16
+                        }}
+                    >
+                        <ToolOutlined />
+                    </div>
+
+                    <div>
+                        <div style={{ fontWeight: 600 }}>
+                            {record.Asset}
+                        </div>
+
+                        <Text
+                            type="secondary"
+                            style={{ fontSize: 12 }}
+                        >
+                            {record.AssetId}
+                        </Text>
+                    </div>
+                </Space>
+            )
+        },
+        {
+            title: "Type",
+            dataIndex: "Type",
+            key: "type",
+            render: (type) => (
+                <Tag color={getTypeColor(type)}>
+                    {type}
+                </Tag>
+            )
+        },
+        {
+            title: "Assigned To",
+            dataIndex: "AssignedTo",
+            key: "assignedTo",
+            render: (value) =>
+                value || "Unassigned"
+        },
+        {
+            title: "Date",
+            dataIndex: "Date",
+            key: "date",
+            render: (value) =>
+                value
+                    ? dayjs(value).format("MMM D, YYYY")
+                    : "-"
+        },
+        {
+            title: "Status",
+            dataIndex: "Status",
+            key: "status",
+            render: (status) => (
+                <Tag color={getStatusColor(status)}>
+                    {status}
+                </Tag>
+            ),
+            filters: [
+                {
+                    text: "Pending",
+                    value: "Pending"
+                },
+                {
+                    text: "In Progress",
+                    value: "In Progress"
+                },
+                {
+                    text: "Completed",
+                    value: "Completed"
+                }
+            ],
+            onFilter: (value, record) =>
+                record.Status === value
+        },
+        {
+            title: "Actions",
+            key: "actions",
+            render: (_, record) => (
+                <Popconfirm
+                    title="Delete maintenance record?"
+                    description={`Delete the maintenance record for ${record.Asset}?`}
+                    okText="Delete"
+                    cancelText="Cancel"
+                    okButtonProps={{
+                        danger: true
+                    }}
+                    onConfirm={() =>
+                        handleDelete(record)
+                    }
+                >
+                    <Button
+                        size="small"
+                        danger
+                        icon={<DeleteOutlined />}
+                    >
+                        Delete
+                    </Button>
+                </Popconfirm>
+            )
+        }
+    ];
+
     return (
-        <main className="maintenance-page">
+        <div style={{ padding: "8px 4px" }}>
+            <Row
+                justify="space-between"
+                align="middle"
+                style={{ marginBottom: 24 }}
+            >
+                <Col>
+                    <Title
+                        level={3}
+                        style={{ margin: 0 }}
+                    >
+                        Maintenance
+                    </Title>
 
-            {/* HEADER */}
-            <header className="maintenance-header">
-                <div>
-                    <h1>Maintenance</h1>
-
-                    <p>
+                    <Text type="secondary">
                         Track and manage asset maintenance records.
-                    </p>
-                </div>
+                    </Text>
+                </Col>
 
-                <button
-                    className="maintenance-primary-btn"
-                    onClick={openAddModal}
-                >
-                    <span>+</span>
-                    Add Maintenance
-                </button>
-            </header>
+                <Col>
+                    <Button
+                        type="primary"
+                        icon={<PlusOutlined />}
+                        onClick={openAddModal}
+                    >
+                        Add Maintenance
+                    </Button>
+                </Col>
+            </Row>
 
-            {/* ERROR */}
-            {error && (
-                <div
-                    style={{
-                        marginBottom: "20px",
-                        padding: "12px 16px",
-                        borderRadius: "10px",
-                        background: "#fee2e2",
-                        color: "#b91c1c",
-                        fontSize: "14px"
-                    }}
-                >
-                    {error}
-                </div>
-            )}
+            <Row
+                gutter={16}
+                style={{ marginBottom: 24 }}
+            >
+                <Col span={8}>
+                    <Card>
+                        <Statistic
+                            title="Completed"
+                            value={completed}
+                            valueStyle={{
+                                color: "#159957"
+                            }}
+                        />
 
-            {/* STATISTICS */}
-            <section className="maintenance-stats">
-
-                <div className="maintenance-stat-card completed">
-                    <div className="maintenance-stat-icon">
-                        ✓
-                    </div>
-
-                    <div>
-                        <span>Completed</span>
-
-                        <strong>
-                            {completed}
-                        </strong>
-
-                        <small>
+                        <Text
+                            type="secondary"
+                            style={{ fontSize: 12 }}
+                        >
                             Completed records
-                        </small>
-                    </div>
-                </div>
+                        </Text>
+                    </Card>
+                </Col>
 
-                <div className="maintenance-stat-card progress">
-                    <div className="maintenance-stat-icon">
-                        ↻
-                    </div>
+                <Col span={8}>
+                    <Card>
+                        <Statistic
+                            title="In Progress"
+                            value={inProgress}
+                            valueStyle={{
+                                color: "#2563eb"
+                            }}
+                        />
 
-                    <div>
-                        <span>In Progress</span>
-
-                        <strong>
-                            {inProgress}
-                        </strong>
-
-                        <small>
+                        <Text
+                            type="secondary"
+                            style={{ fontSize: 12 }}
+                        >
                             Currently being handled
-                        </small>
-                    </div>
-                </div>
+                        </Text>
+                    </Card>
+                </Col>
 
-                <div className="maintenance-stat-card pending">
-                    <div className="maintenance-stat-icon">
-                        !
-                    </div>
+                <Col span={8}>
+                    <Card>
+                        <Statistic
+                            title="Pending"
+                            value={pending}
+                            valueStyle={{
+                                color: "#d97706"
+                            }}
+                        />
 
-                    <div>
-                        <span>Pending</span>
-
-                        <strong>
-                            {pending}
-                        </strong>
-
-                        <small>
+                        <Text
+                            type="secondary"
+                            style={{ fontSize: 12 }}
+                        >
                             Waiting for action
-                        </small>
-                    </div>
-                </div>
+                        </Text>
+                    </Card>
+                </Col>
+            </Row>
 
-            </section>
-
-            {/* MAIN CARD */}
-            <section className="maintenance-card">
-
-                <div className="maintenance-card-header">
-
-                    <div>
-                        <h2>
-                            Maintenance Records
-                        </h2>
-
-                        <p>
-                            View and manage asset maintenance activities.
-                        </p>
-                    </div>
-
-                    <div className="maintenance-record-count">
+            <Card
+                title="Maintenance Records"
+                extra={
+                    <Text type="secondary">
                         {records.length} Records
-                    </div>
-
-                </div>
-
-                {/* TABLE */}
-                <div className="maintenance-table">
-
-                    <div className="maintenance-table-head">
-                        <span>Asset</span>
-                        <span>Type</span>
-                        <span>Assigned To</span>
-                        <span>Date</span>
-                        <span>Status</span>
-                        <span>Actions</span>
-                    </div>
-
-                    {loading ? (
-
-                        <div className="maintenance-empty">
-
-                            <div className="maintenance-empty-icon">
-                                M
-                            </div>
-
-                            <strong>
-                                Loading maintenance records...
-                            </strong>
-
-                            <span>
-                                Please wait while the records are being loaded.
-                            </span>
-
-                        </div>
-
-                    ) : records.length === 0 ? (
-
-                        <div className="maintenance-empty">
-
-                            <div className="maintenance-empty-icon">
-                                M
-                            </div>
-
-                            <strong>
-                                No maintenance records
-                            </strong>
-
-                            <span>
-                                Add a maintenance record to get started.
-                            </span>
-
-                            <button
-                                onClick={openAddModal}
-                            >
-                                Add Maintenance
-                            </button>
-
-                        </div>
-
-                    ) : (
-
-                        records.map((record) => (
-
-                            <div
-                                className="maintenance-row"
-                                key={record.Id}
-                            >
-
-                                {/* ASSET */}
-                                <div className="maintenance-asset">
-
-                                    <div className="maintenance-asset-icon">
-                                        {getTypeIcon(record.Type)}
-                                    </div>
-
-                                    <div>
-
-                                        <strong>
-                                            {record.Asset}
-                                        </strong>
-
-                                        <small>
-                                            {record.AssetId}
-                                        </small>
-
-                                    </div>
-
-                                </div>
-
-                                {/* TYPE */}
-                                <div className="maintenance-detail">
-
-                                    <span className="mobile-label">
-                                        Type
-                                    </span>
-
-                                    <span>
-                                        {record.Type}
-                                    </span>
-
-                                </div>
-
-                                {/* ASSIGNED TO */}
-                                <div className="maintenance-detail">
-
-                                    <span className="mobile-label">
-                                        Assigned To
-                                    </span>
-
-                                    <span>
-                                        {record.AssignedTo}
-                                    </span>
-
-                                </div>
-
-                                {/* DATE */}
-                                <div className="maintenance-detail">
-
-                                    <span className="mobile-label">
-                                        Date
-                                    </span>
-
-                                    <span>
-                                        {record.Date
-                                            ? record.Date.substring(0, 10)
-                                            : ""}
-                                    </span>
-
-                                </div>
-
-                                {/* STATUS */}
-                                <div className="maintenance-detail">
-
-                                    <span className="mobile-label">
-                                        Status
-                                    </span>
-
-                                    <span
-                                        className={`maintenance-status ${getStatusClass(
-                                            record.Status
-                                        )}`}
-                                    >
-                                        <span className="status-dot"></span>
-
-                                        {record.Status}
-                                    </span>
-
-                                </div>
-
-                                {/* ACTIONS */}
-                                <div className="maintenance-actions">
-
-                                    <button
-                                        className="maintenance-delete-btn"
-                                        onClick={() =>
-                                            handleDelete(record.Id)
-                                        }
-                                        disabled={
-                                            deletingId === record.Id
-                                        }
-                                    >
-                                        {deletingId === record.Id
-                                            ? "Deleting..."
-                                            : "Delete"}
-                                    </button>
-
-                                </div>
-
-                            </div>
-
-                        ))
-
-                    )}
-
-                </div>
-
-            </section>
-
-            {/* ADD MAINTENANCE MODAL */}
-            {showModal && (
-
-                <div
-                    className="maintenance-modal-overlay"
-                    onMouseDown={(e) => {
-
-                        if (
-                            e.target === e.currentTarget &&
-                            !saving
-                        ) {
-                            closeModal();
-                        }
-
+                    </Text>
+                }
+            >
+                <Table
+                    columns={columns}
+                    dataSource={records}
+                    rowKey="Id"
+                    loading={loading}
+                    pagination={{
+                        pageSize: 8
                     }}
+                    locale={{
+                        emptyText:
+                            "No maintenance records"
+                    }}
+                />
+            </Card>
+
+            <Modal
+                title="Add Maintenance"
+                open={showModal}
+                onCancel={closeModal}
+                footer={null}
+                destroyOnClose
+            >
+                <Form
+                    form={form}
+                    layout="vertical"
+                    onFinish={handleSubmit}
                 >
+                    <Form.Item
+                        label="Asset"
+                        name="assetId"
+                        rules={[
+                            {
+                                required: true,
+                                message:
+                                    "Please select an asset"
+                            }
+                        ]}
+                    >
+                        <Select
+                            placeholder={
+                                loadingAssets
+                                    ? "Loading assets..."
+                                    : "Select an asset"
+                            }
+                            loading={loadingAssets}
+                            showSearch
+                            optionFilterProp="label"
+                            options={assets.map(
+                                (asset) => ({
+                                    value:
+                                        asset.AssetTag,
+                                    label:
+                                        `${asset.AssetName} - ${asset.AssetTag}`
+                                })
+                            )}
+                        />
+                    </Form.Item>
 
-                    <div className="maintenance-modal">
+                    <Row gutter={12}>
+                        <Col span={12}>
+                            <Form.Item
+                                label="Maintenance Type"
+                                name="type"
+                                rules={[
+                                    {
+                                        required: true
+                                    }
+                                ]}
+                            >
+                                <Select
+                                    options={[
+                                        {
+                                            value: "Repair",
+                                            label: "Repair"
+                                        },
+                                        {
+                                            value: "Preventive",
+                                            label: "Preventive"
+                                        },
+                                        {
+                                            value: "Inspection",
+                                            label: "Inspection"
+                                        }
+                                    ]}
+                                />
+                            </Form.Item>
+                        </Col>
 
-                        {/* MODAL HEADER */}
-                        <div className="maintenance-modal-header">
+                        <Col span={12}>
+                            <Form.Item
+                                label="Status"
+                                name="status"
+                                rules={[
+                                    {
+                                        required: true
+                                    }
+                                ]}
+                            >
+                                <Select
+                                    options={[
+                                        {
+                                            value: "Pending",
+                                            label: "Pending"
+                                        },
+                                        {
+                                            value: "In Progress",
+                                            label: "In Progress"
+                                        },
+                                        {
+                                            value: "Completed",
+                                            label: "Completed"
+                                        }
+                                    ]}
+                                />
+                            </Form.Item>
+                        </Col>
+                    </Row>
 
-                            <div className="maintenance-modal-title">
+                    <Form.Item
+                        label="Assigned To"
+                        name="assignedTo"
+                        rules={[
+                            {
+                                required: true,
+                                message:
+                                    "Assigned person or department is required"
+                            }
+                        ]}
+                    >
+                        <Input
+                            placeholder="e.g. IT Department"
+                        />
+                    </Form.Item>
 
-                                <div className="maintenance-modal-icon">
-                                    M
-                                </div>
+                    <Form.Item
+                        label="Maintenance Date"
+                        name="date"
+                        rules={[
+                            {
+                                required: true,
+                                message:
+                                    "Please select a date"
+                            }
+                        ]}
+                    >
+                        <DatePicker
+                            style={{
+                                width: "100%"
+                            }}
+                        />
+                    </Form.Item>
 
-                                <div>
-
-                                    <h2>
-                                        Add Maintenance
-                                    </h2>
-
-                                    <p>
-                                        Enter the maintenance details.
-                                    </p>
-
-                                </div>
-
-                            </div>
-
-                            <button
-                                className="maintenance-modal-close"
+                    <Form.Item
+                        style={{
+                            marginBottom: 0,
+                            textAlign: "right"
+                        }}
+                    >
+                        <Space>
+                            <Button
                                 onClick={closeModal}
                                 disabled={saving}
                             >
-                                ×
-                            </button>
+                                Cancel
+                            </Button>
 
-                        </div>
-
-                        {/* FORM */}
-                        <form
-                            className="maintenance-form"
-                            onSubmit={handleSubmit}
-                        >
-
-                            {/* ASSET */}
-                            <div className="maintenance-form-group">
-
-                                <label>
-                                    Asset
-                                </label>
-
-                                <select
-                                    value={form.assetId}
-                                    onChange={handleAssetChange}
-                                    required
-                                    disabled={
-                                        saving ||
-                                        loadingAssets
-                                    }
-                                >
-
-                                    <option value="">
-                                        {loadingAssets
-                                            ? "Loading assets..."
-                                            : assets.length === 0
-                                                ? "No assets available"
-                                                : "Select an asset"}
-                                    </option>
-
-                                    {assets.map((asset) => (
-
-                                        <option
-                                            key={asset.Id}
-                                            value={asset.AssetTag}
-                                        >
-                                            {asset.AssetName} - {asset.AssetTag}
-                                        </option>
-
-                                    ))}
-
-                                </select>
-
-                            </div>
-
-                            {/* SELECTED ASSET */}
-                            {form.assetId && (
-
-                                <div
-                                    style={{
-                                        padding: "12px 14px",
-                                        borderRadius: "10px",
-                                        background: "#f8fafc",
-                                        border: "1px solid #e2e8f0",
-                                        fontSize: "13px",
-                                        color: "#475569"
-                                    }}
-                                >
-
-                                    <strong>
-                                        Selected Asset
-                                    </strong>
-
-                                    <div
-                                        style={{
-                                            marginTop: "4px"
-                                        }}
-                                    >
-                                        {form.asset}
-                                    </div>
-
-                                    <div
-                                        style={{
-                                            marginTop: "2px"
-                                        }}
-                                    >
-                                        Asset Tag: {form.assetId}
-                                    </div>
-
-                                </div>
-
-                            )}
-
-                            {/* TYPE + STATUS */}
-                            <div className="maintenance-form-row">
-
-                                <div className="maintenance-form-group">
-
-                                    <label>
-                                        Maintenance Type
-                                    </label>
-
-                                    <select
-                                        name="type"
-                                        value={form.type}
-                                        onChange={handleChange}
-                                        disabled={saving}
-                                    >
-
-                                        <option value="Repair">
-                                            Repair
-                                        </option>
-
-                                        <option value="Preventive">
-                                            Preventive
-                                        </option>
-
-                                        <option value="Inspection">
-                                            Inspection
-                                        </option>
-
-                                    </select>
-
-                                </div>
-
-                                <div className="maintenance-form-group">
-
-                                    <label>
-                                        Status
-                                    </label>
-
-                                    <select
-                                        name="status"
-                                        value={form.status}
-                                        onChange={handleChange}
-                                        disabled={saving}
-                                    >
-
-                                        <option value="Pending">
-                                            Pending
-                                        </option>
-
-                                        <option value="In Progress">
-                                            In Progress
-                                        </option>
-
-                                        <option value="Completed">
-                                            Completed
-                                        </option>
-
-                                    </select>
-
-                                </div>
-
-                            </div>
-
-                            {/* ASSIGNED TO */}
-                            <div className="maintenance-form-group">
-
-                                <label>
-                                    Assigned To
-                                </label>
-
-                                <input
-                                    name="assignedTo"
-                                    value={form.assignedTo}
-                                    onChange={handleChange}
-                                    placeholder="e.g. IT Department"
-                                    required
-                                    disabled={saving}
-                                />
-
-                            </div>
-
-                            {/* DATE */}
-                            <div className="maintenance-form-group">
-
-                                <label>
-                                    Maintenance Date
-                                </label>
-
-                                <input
-                                    type="date"
-                                    name="date"
-                                    value={form.date}
-                                    onChange={handleChange}
-                                    required
-                                    disabled={saving}
-                                />
-
-                            </div>
-
-                            {/* ACTIONS */}
-                            <div className="maintenance-modal-actions">
-
-                                <button
-                                    type="button"
-                                    className="maintenance-cancel-btn"
-                                    onClick={closeModal}
-                                    disabled={saving}
-                                >
-                                    Cancel
-                                </button>
-
-                                <button
-                                    type="submit"
-                                    className="maintenance-save-btn"
-                                    disabled={
-                                        saving ||
-                                        loadingAssets ||
-                                        !form.assetId
-                                    }
-                                >
-                                    {saving
-                                        ? "Saving..."
-                                        : "Add Maintenance"}
-                                </button>
-
-                            </div>
-
-                        </form>
-
-                    </div>
-
-                </div>
-
-            )}
-
-        </main>
+                            <Button
+                                type="primary"
+                                htmlType="submit"
+                                loading={saving}
+                            >
+                                Add Maintenance
+                            </Button>
+                        </Space>
+                    </Form.Item>
+                </Form>
+            </Modal>
+        </div>
     );
 }
 

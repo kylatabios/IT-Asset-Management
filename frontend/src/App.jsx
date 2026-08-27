@@ -1,13 +1,12 @@
 import {
-    BrowserRouter,
     Routes,
     Route,
     Navigate,
-    useNavigate
+    useNavigate,
+    Link,
+    Outlet
 } from "react-router-dom";
-
-import { useState } from "react";
-
+import { useEffect, useState } from "react";
 import "./App.css";
 
 import Sidebar from "./components/Sidebar";
@@ -17,10 +16,16 @@ import Maintenance from "./pages/Maintenance";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 
+const ASSETS_API_URL = "http://localhost:5000/api/assets";
+const MAINTENANCE_API_URL = "http://localhost:5000/api/maintenance";
 
-/* ============================================
-   Login Page
-   ============================================ */
+function ProtectedRoute({ children }) {
+    const token = localStorage.getItem("token");
+    if (!token) {
+        return <Navigate to="/" replace />;
+    }
+    return children;
+}
 
 function Login() {
     const navigate = useNavigate();
@@ -67,14 +72,10 @@ function Login() {
             );
 
             navigate("/dashboard");
-
         } catch (error) {
-            console.error("Login error:", error);
-
             setError(
                 "Unable to connect to the server."
             );
-
         } finally {
             setLoading(false);
         }
@@ -147,8 +148,9 @@ function Login() {
                     {error && (
                         <p
                             style={{
-                                color: "red",
-                                marginBottom: "15px"
+                                color: "#dc2626",
+                                marginBottom: "15px",
+                                fontSize: "13px"
                             }}
                         >
                             {error}
@@ -172,439 +174,244 @@ function Login() {
     );
 }
 
-
-/* ============================================
-   Dashboard Home
-   ============================================ */
-
 function DashboardHome() {
+    const [assets, setAssets] = useState([]);
+    const [maintenance, setMaintenance] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
+
+    useEffect(() => {
+        fetchDashboardData();
+    }, []);
+
+    const fetchDashboardData = async () => {
+        try {
+            setLoading(true);
+            setError("");
+
+            const [assetsResponse, maintenanceResponse] =
+                await Promise.all([
+                    fetch(ASSETS_API_URL),
+                    fetch(MAINTENANCE_API_URL)
+                ]);
+
+            const assetsData = await assetsResponse.json();
+            const maintenanceData =
+                await maintenanceResponse.json();
+
+            if (!assetsResponse.ok || !assetsData.success) {
+                throw new Error(
+                    assetsData.message || "Failed to load assets"
+                );
+            }
+
+            if (!maintenanceResponse.ok || !maintenanceData.success) {
+                throw new Error(
+                    maintenanceData.message || "Failed to load maintenance records"
+                );
+            }
+
+            setAssets(assetsData.assets || []);
+            setMaintenance(maintenanceData.maintenance || []);
+        } catch (error) {
+            setError("Failed to load dashboard data.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const totalAssets = assets.length;
+    const activeAssets = assets.filter(
+        (asset) => asset.Status?.toLowerCase() === "active"
+    ).length;
+    const unavailableAssets = assets.filter(
+        (asset) => asset.Status?.toLowerCase() === "unavailable"
+    ).length;
+    const maintenanceAssets = maintenance.length;
+
+    const recentAssets = [...assets].slice(-3).reverse();
+
     return (
         <div className="dashboard-home">
-
             <header className="dashboard-header">
                 <div>
-                    <h1>
-                        Dashboard
-                    </h1>
-
-                    <p>
-                        Overview of your IT asset management system.
-                    </p>
+                    <h1>Dashboard</h1>
+                    <p>Overview of your IT asset management system.</p>
                 </div>
-
-                <button className="notification-btn">
-                    Notifications
-                </button>
+                <button className="notification-btn">Notifications</button>
             </header>
 
+            {error && (
+                <div
+                    style={{
+                        marginBottom: "20px",
+                        padding: "12px 16px",
+                        borderRadius: "8px",
+                        background: "#fee2e2",
+                        color: "#b91c1c",
+                        fontSize: "14px"
+                    }}
+                >
+                    {error}
+                </div>
+            )}
 
             <section className="stats-grid">
+    <div className="stat-card">
+        <div className="stat-icon blue">📦</div>
+        <div>
+            <span>Total Assets</span>
+            <h2 style={{ color: "#2563eb" }}>{loading ? "..." : totalAssets}</h2>
+            <small>Registered equipment</small>
+        </div>
+    </div>
 
-                <div className="stat-card">
-                    <div className="stat-icon blue">
-                        A
-                    </div>
+    <div className="stat-card">
+        <div className="stat-icon green">⚡</div>
+        <div>
+            <span>Active Assets</span>
+            <h2 style={{ color: "#159957" }}>{loading ? "..." : activeAssets}</h2>
+            <small>Currently in use</small>
+        </div>
+    </div>
 
-                    <div>
-                        <span>
-                            Total Assets
-                        </span>
+    <div className="stat-card">
+        <div className="stat-icon orange">🛠️</div>
+        <div>
+            <span>Maintenance</span>
+            <h2 style={{ color: "#d97706" }}>{loading ? "..." : maintenanceAssets}</h2>
+            <small>Needs attention</small>
+        </div>
+    </div>
 
-                        <h2>
-                            128
-                        </h2>
-
-                        <small>
-                            All registered assets
-                        </small>
-                    </div>
-                </div>
-
-
-                <div className="stat-card">
-                    <div className="stat-icon green">
-                        A
-                    </div>
-
-                    <div>
-                        <span>
-                            Active Assets
-                        </span>
-
-                        <h2>
-                            112
-                        </h2>
-
-                        <small>
-                            Currently in use
-                        </small>
-                    </div>
-                </div>
-
-
-                <div className="stat-card">
-                    <div className="stat-icon orange">
-                        M
-                    </div>
-
-                    <div>
-                        <span>
-                            Maintenance
-                        </span>
-
-                        <h2>
-                            10
-                        </h2>
-
-                        <small>
-                            Needs attention
-                        </small>
-                    </div>
-                </div>
-
-
-                <div className="stat-card">
-                    <div className="stat-icon red">
-                        U
-                    </div>
-
-                    <div>
-                        <span>
-                            Unavailable
-                        </span>
-
-                        <h2>
-                            6
-                        </h2>
-
-                        <small>
-                            Not currently available
-                        </small>
-                    </div>
-                </div>
-
-            </section>
-
+    <div className="stat-card">
+        <div className="stat-icon red">⚠️</div>
+        <div>
+            <span>Unavailable</span>
+            <h2 style={{ color: "#dc2626" }}>{loading ? "..." : unavailableAssets}</h2>
+            <small>Not currently available</small>
+        </div>
+    </div>
+</section>
 
             <section className="dashboard-content">
-
                 <div className="content-card">
-
                     <div className="card-header">
                         <div>
-                            <h2>
-                                Recent Assets
-                            </h2>
-
-                            <p>
-                                Recently added or updated assets
-                            </p>
+                            <h2>Recent Assets</h2>
+                            <p>Recently added or updated assets</p>
                         </div>
-
-                        <a
-                            href="/assets"
-                            className="view-btn"
-                        >
-                            View All
-                        </a>
+                        <Link to="/assets" className="view-btn">
+                            View All →
+                        </Link>
                     </div>
-
 
                     <div className="asset-table">
-
                         <div className="table-row table-head">
-                            <span>
-                                Asset
-                            </span>
-
-                            <span>
-                                Category
-                            </span>
-
-                            <span>
-                                Status
-                            </span>
-
-                            <span>
-                                Assigned To
-                            </span>
+                            <span>Asset</span>
+                            <span>Category</span>
+                            <span>Status</span>
+                            <span>Assigned To</span>
                         </div>
 
-
-                        <div className="table-row">
-
-                            <div className="asset-name">
-
-                                <div className="asset-icon">
-                                    PC
-                                </div>
-
-                                <div>
-                                    <strong>
-                                        Dell OptiPlex 7090
-                                    </strong>
-
-                                    <small>
-                                        IT-2026-001
-                                    </small>
-                                </div>
-
+                        {loading ? (
+                            <div className="table-row">
+                                <span>Loading...</span>
                             </div>
-
-                            <span>
-                                Desktop
-                            </span>
-
-                            <span className="status active-status">
-                                Active
-                            </span>
-
-                            <span>
-                                John Smith
-                            </span>
-
-                        </div>
-
-
-                        <div className="table-row">
-
-                            <div className="asset-name">
-
-                                <div className="asset-icon">
-                                    LT
-                                </div>
-
-                                <div>
-                                    <strong>
-                                        Lenovo ThinkPad E14
-                                    </strong>
-
-                                    <small>
-                                        IT-2026-002
-                                    </small>
-                                </div>
-
+                        ) : recentAssets.length === 0 ? (
+                            <div className="table-row">
+                                <span>No assets found.</span>
                             </div>
+                        ) : (
+                            recentAssets.map((asset) => (
+                                <div className="table-row" key={asset.Id}>
+                                    <div className="asset-name">
+                                        <div className="asset-icon">
+                                            {asset.Category ? asset.Category.substring(0, 2).toUpperCase() : "IT"}
+                                        </div>
+                                        <div>
+                                            <strong>{asset.AssetName}</strong>
+                                            <small>{asset.AssetTag}</small>
+                                        </div>
+                                    </div>
 
-                            <span>
-                                Laptop
-                            </span>
+                                    <span>{asset.Category}</span>
 
-                            <span className="status active-status">
-                                Active
-                            </span>
+                                    <div>
+                                        <span
+                                            className={`status ${
+                                                asset.Status?.toLowerCase() === "active"
+                                                    ? "active-status"
+                                                    : "maintenance-status"
+                                            }`}
+                                        >
+                                            {asset.Status}
+                                        </span>
+                                    </div>
 
-                            <span>
-                                Maria Santos
-                            </span>
-
-                        </div>
-
-
-                        <div className="table-row">
-
-                            <div className="asset-name">
-
-                                <div className="asset-icon">
-                                    PR
+                                    <span>{asset.AssignedTo || "Unassigned"}</span>
                                 </div>
-
-                                <div>
-                                    <strong>
-                                        HP LaserJet Pro
-                                    </strong>
-
-                                    <small>
-                                        IT-2026-003
-                                    </small>
-                                </div>
-
-                            </div>
-
-                            <span>
-                                Printer
-                            </span>
-
-                            <span className="status maintenance-status">
-                                Maintenance
-                            </span>
-
-                            <span>
-                                IT Department
-                            </span>
-
-                        </div>
-
+                            ))
+                        )}
                     </div>
-
                 </div>
-
 
                 <div className="content-card quick-actions">
-
                     <div className="card-header">
-
                         <div>
-                            <h2>
-                                Quick Actions
-                            </h2>
-
-                            <p>
-                                Common management tasks
-                            </p>
+                            <h2>Quick Actions</h2>
+                            <p>Common management tasks</p>
                         </div>
-
                     </div>
 
-
-                    <a
-                        href="/assets"
-                        className="quick-action-btn"
-                    >
-                        <span>
-                            +
-                        </span>
-
-                        Add New Asset
-                    </a>
-
-
-                    <a
-                        href="/users"
-                        className="quick-action-btn"
-                    >
-                        <span>
-                            U
-                        </span>
-
-                        Manage Users
-                    </a>
-
-
-                    <a
-                        href="/reports"
-                        className="quick-action-btn"
-                    >
-                        <span>
-                            R
-                        </span>
-
-                        Generate Report
-                    </a>
-
+                    <Link to="/assets" className="quick-action-btn">
+                        <span>+</span> Add New Asset
+                    </Link>
+                    <Link to="/users" className="quick-action-btn">
+                        <span>👥</span> Manage Users
+                    </Link>
+                    <Link to="/reports" className="quick-action-btn">
+                        <span>📊</span> Generate Report
+                    </Link>
                 </div>
-
             </section>
-
         </div>
     );
 }
-
-
-/* ============================================
-   System Layout
-   ============================================ */
 
 function SystemLayout() {
     return (
         <div className="dashboard-page">
-
             <Sidebar />
-
             <main className="dashboard-main">
-
-                <Routes>
-
-                    <Route
-                        path="/dashboard"
-                        element={
-                            <DashboardHome />
-                        }
-                    />
-
-                    <Route
-                        path="/assets"
-                        element={
-                            <Assets />
-                        }
-                    />
-
-                    <Route
-                        path="/users"
-                        element={
-                            <Users />
-                        }
-                    />
-
-                    <Route
-                        path="/maintenance"
-                        element={
-                            <Maintenance />
-                        }
-                    />
-
-                    <Route
-                        path="/reports"
-                        element={
-                            <Reports />
-                        }
-                    />
-
-                    <Route
-                        path="/settings"
-                        element={
-                            <Settings />
-                        }
-                    />
-
-                    <Route
-                        path="*"
-                        element={
-                            <Navigate
-                                to="/dashboard"
-                                replace
-                            />
-                        }
-                    />
-
-                </Routes>
-
+                <Outlet />
             </main>
-
         </div>
     );
 }
 
-
-/* ============================================
-   Main App
-   ============================================ */
-
 function App() {
     return (
-        <BrowserRouter>
+        <Routes>
+            <Route path="/" element={<Login />} />
 
-            <Routes>
-
-                <Route
-                    path="/"
-                    element={
-                        <Login />
-                    }
-                />
-
-                <Route
-                    path="/*"
-                    element={
+            <Route
+                element={
+                    <ProtectedRoute>
                         <SystemLayout />
-                    }
-                />
-
-            </Routes>
-
-        </BrowserRouter>
+                    </ProtectedRoute>
+                }
+            >
+                <Route path="/dashboard" element={<DashboardHome />} />
+                <Route path="/assets" element={<Assets />} />
+                <Route path="/users" element={<Users />} />
+                <Route path="/maintenance" element={<Maintenance />} />
+                <Route path="/reports" element={<Reports />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            </Route>
+        </Routes>
     );
 }
-
 
 export default App;

@@ -202,28 +202,58 @@ function Assets() {
     };
 
     const handleDelete = async (asset) => {
+    try {
+        const response = await fetch(`${API_URL}/${asset.Id}`, {
+            method: "DELETE"
+        });
+
+        const text = await response.text();
+
+        let data;
+
         try {
-            const response = await fetch(
-                `${API_URL}/${asset.Id}`,
-                {
-                    method: "DELETE"
-                }
+            data = JSON.parse(text);
+        } catch {
+            data = null;
+        }
+
+        if (!response.ok) {
+            console.error("Delete response:", {
+                status: response.status,
+                statusText: response.statusText,
+                body: text
+            });
+
+            message.error(
+                data?.message ||
+                `Failed to delete asset. Server returned ${response.status}.`
             );
 
-            const data = await response.json();
-
-            if (!response.ok || !data.success) {
-                message.error(data.message || "Failed to delete asset");
-                return;
-            }
-
-            message.success(`${asset.AssetName} deleted`);
-            await loadAssets();
-        } catch (error) {
-            console.error("Delete asset error:", error);
-            message.error("Failed to connect to the server");
+            return;
         }
-    };
+
+        if (!data?.success) {
+            message.error(
+                data?.message || "Failed to delete asset."
+            );
+
+            return;
+        }
+
+        message.success(`${asset.AssetName} deleted successfully`);
+
+        setAssets((previous) =>
+            previous.filter((item) => item.Id !== asset.Id)
+        );
+
+    } catch (error) {
+        console.error("Delete asset error:", error);
+
+        message.error(
+            "Failed to connect to the server."
+        );
+    }
+};
 
     const columns = [
         {

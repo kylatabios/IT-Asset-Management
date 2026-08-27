@@ -161,7 +161,7 @@ function Sidebar() {
         localStorage.removeItem("token");
         localStorage.removeItem("user");
 
-        navigate("/login");
+        navigate("/");
     };
 
     return (
