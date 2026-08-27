@@ -138,131 +138,23 @@ body {
     transform: translateY(1px);
 }
 
+/* ============================================
+   Dashboard layout (Sidebar + Main content)
+   NOTE: Sidebar itself is styled in Sidebar.css.
+   This flex container is what positions it —
+   do NOT add margin-left/fixed positioning here,
+   that's what was causing the extra gap.
+   ============================================ */
+
 .dashboard-page {
     min-height: 100vh;
     display: flex;
     background: #f5f7fb;
 }
 
-.sidebar {
-    width: 250px;
-    min-height: 100vh;
-    background: #ffffff;
-    border-right: 1px solid #e7eaf0;
-    display: flex;
-    flex-direction: column;
-    position: fixed;
-    left: 0;
-    top: 0;
-    bottom: 0;
-}
-
-.sidebar-brand {
-    height: 82px;
-    padding: 0 24px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    border-bottom: 1px solid #edf0f4;
-}
-
-.sidebar-brand .brand-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 9px;
-    font-size: 13px;
-}
-
-.sidebar-brand h2 {
-    margin: 0;
-    font-size: 15px;
-    font-weight: 700;
-}
-
-.sidebar-brand span {
-    display: block;
-    font-size: 11px;
-    color: #8992a3;
-    margin-top: 2px;
-}
-
-.sidebar-nav {
-    padding: 25px 14px;
-}
-
-.sidebar-nav a {
-    height: 44px;
-    padding: 0 14px;
-    margin-bottom: 5px;
-    display: flex;
-    align-items: center;
-    gap: 13px;
-    border-radius: 8px;
-    color: #687286;
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: 0.2s ease;
-}
-
-.sidebar-nav a span {
-    width: 18px;
-    text-align: center;
-    font-size: 16px;
-}
-
-.sidebar-nav a:hover {
-    background: #f3f6fb;
-    color: #1d4ed8;
-}
-
-.sidebar-nav a.active {
-    background: #edf3ff;
-    color: #1d4ed8;
-    font-weight: 600;
-}
-
-.sidebar-bottom {
-    margin-top: auto;
-    padding: 18px 20px;
-    border-top: 1px solid #edf0f4;
-}
-
-.user-profile {
-    display: flex;
-    align-items: center;
-    gap: 11px;
-}
-
-.avatar {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: #e8eefc;
-    color: #1d4ed8;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 13px;
-    font-weight: 700;
-}
-
-.user-profile strong {
-    display: block;
-    font-size: 12px;
-    font-weight: 600;
-}
-
-.user-profile span {
-    display: block;
-    margin-top: 3px;
-    font-size: 10px;
-    color: #8b94a5;
-}
-
 .dashboard-main {
-    margin-left: 250px;
-    width: calc(100% - 250px);
+    flex: 1;
+    min-width: 0;
     padding: 34px 40px;
 }
 
@@ -402,6 +294,7 @@ body {
     font-size: 12px;
     font-weight: 600;
     cursor: pointer;
+    text-decoration: none;
 }
 
 .asset-table {
@@ -485,6 +378,8 @@ body {
     color: #c77700;
 }
 
+/* ---------- Quick Actions ---------- */
+
 .quick-actions {
     padding-bottom: 15px;
 }
@@ -493,7 +388,7 @@ body {
     margin-bottom: 6px;
 }
 
-.quick-actions button {
+.quick-action-btn {
     width: calc(100% - 30px);
     height: 48px;
     margin: 7px 15px;
@@ -509,18 +404,45 @@ body {
     font-weight: 500;
     cursor: pointer;
     text-align: left;
+    text-decoration: none;
+    box-sizing: border-box;
     transition: 0.2s ease;
 }
 
-.quick-actions button span {
+.quick-action-btn span {
     color: #1d4ed8;
     font-size: 17px;
+    min-width: 18px;
+    text-align: center;
 }
 
-.quick-actions button:hover {
+.quick-action-btn:hover {
     background: #f7f9fc;
     border-color: #d5dce8;
 }
+
+/* ---------- Page placeholder (Maintenance/Reports/Settings) ---------- */
+
+.page-placeholder {
+    background: #ffffff;
+    border: 1px solid #e7eaf0;
+    border-radius: 12px;
+    padding: 48px 24px;
+    text-align: center;
+}
+
+.page-placeholder h1 {
+    margin: 0 0 8px;
+    font-size: 22px;
+}
+
+.page-placeholder p {
+    margin: 0;
+    color: #7a8497;
+    font-size: 13px;
+}
+
+/* ---------- Responsive ---------- */
 
 @media (max-width: 1100px) {
     .stats-grid {
@@ -533,40 +455,7 @@ body {
 }
 
 @media (max-width: 800px) {
-    .sidebar {
-        width: 70px;
-    }
-
-    .sidebar-brand {
-        padding: 0;
-        justify-content: center;
-    }
-
-    .sidebar-brand > div:not(.brand-icon),
-    .sidebar-nav a:not(.active) {
-        font-size: 0;
-    }
-
-    .sidebar-nav a {
-        justify-content: center;
-        padding: 0;
-    }
-
-    .sidebar-nav a span {
-        font-size: 16px;
-    }
-
-    .sidebar-bottom {
-        padding: 15px 10px;
-    }
-
-    .user-profile > div:not(.avatar) {
-        display: none;
-    }
-
     .dashboard-main {
-        margin-left: 70px;
-        width: calc(100% - 70px);
         padding: 25px;
     }
 
