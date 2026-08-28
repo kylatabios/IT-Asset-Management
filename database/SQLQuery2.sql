@@ -1,15 +1,20 @@
 USE master;
+
 GO
 
 CREATE LOGIN assetadmin
-WITH PASSWORD = 'AssetAdmin@12345';
+WITH PASSWORD = 'YOUR_DATABASE_PASSWORD';
+
 GO
 
 USE ITAssetManagement;
+
 GO
 
 CREATE USER assetadmin FOR LOGIN assetadmin;
-GO
+
+GO  
 
 ALTER ROLE db_owner ADD MEMBER assetadmin;
+
 GO
