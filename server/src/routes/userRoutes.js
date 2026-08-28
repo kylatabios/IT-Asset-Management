@@ -1,4 +1,3 @@
-
 const express = require("express");
 const bcrypt = require("bcrypt");
 const { sql, dbConfig } = require("../config/database");
@@ -218,6 +217,89 @@ router.put("/:id", async (req, res) => {
     }
 });
 
+router.put("/:id/password", async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { currentPassword, newPassword } = req.body;
+
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({
+                success: false,
+                message: "Current password and new password are required"
+            });
+        }
+
+        if (newPassword.length < 6) {
+            return res.status(400).json({
+                success: false,
+                message: "New password must be at least 6 characters"
+            });
+        }
+
+        const pool = await sql.connect(dbConfig);
+
+        const result = await pool
+            .request()
+            .input("Id", sql.Int, Number(id))
+            .query(`
+                SELECT
+                    Id,
+                    PasswordHash
+                FROM Users
+                WHERE Id = @Id
+            `);
+
+        if (result.recordset.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+        const user = result.recordset[0];
+
+        const passwordMatch = await bcrypt.compare(
+            currentPassword,
+            user.PasswordHash
+        );
+
+        if (!passwordMatch) {
+            return res.status(401).json({
+                success: false,
+                message: "Current password is incorrect"
+            });
+        }
+
+        const newPasswordHash = await bcrypt.hash(
+            newPassword,
+            10
+        );
+
+        await pool
+            .request()
+            .input("Id", sql.Int, Number(id))
+            .input("PasswordHash", sql.NVarChar, newPasswordHash)
+            .query(`
+                UPDATE Users
+                SET PasswordHash = @PasswordHash
+                WHERE Id = @Id
+            `);
+
+        res.json({
+            success: true,
+            message: "Password changed successfully"
+        });
+    } catch (error) {
+        console.error("Change password error:", error);
+
+        res.status(500).json({
+            success: false,
+            message: "Failed to change password",
+            error: error.message
+        });
+    }
+});
+
 router.delete("/:id", async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
@@ -258,4 +340,3 @@ router.delete("/:id", async (req, res) => {
 });
 
 module.exports = router;
-

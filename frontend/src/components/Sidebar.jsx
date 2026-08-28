@@ -10,42 +10,10 @@ function Sidebar() {
             label: "Dashboard",
             icon: (
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                    <rect
-                        x="3"
-                        y="3"
-                        width="7"
-                        height="7"
-                        rx="1.5"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                    />
-                    <rect
-                        x="14"
-                        y="3"
-                        width="7"
-                        height="7"
-                        rx="1.5"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                    />
-                    <rect
-                        x="3"
-                        y="14"
-                        width="7"
-                        height="7"
-                        rx="1.5"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                    />
-                    <rect
-                        x="14"
-                        y="14"
-                        width="7"
-                        height="7"
-                        rx="1.5"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                    />
+                    <rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="2" />
+                    <rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="2" />
+                    <rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="2" />
+                    <rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="2" />
                 </svg>
             )
         },
@@ -54,24 +22,8 @@ function Sidebar() {
             label: "Assets",
             icon: (
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                    <rect
-                        x="3"
-                        y="4"
-                        width="18"
-                        height="14"
-                        rx="2"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                    />
-                    <rect
-                        x="7"
-                        y="8"
-                        width="10"
-                        height="6"
-                        rx="1"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                    />
+                    <rect x="3" y="4" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="2" />
+                    <rect x="7" y="8" width="10" height="6" rx="1" stroke="currentColor" strokeWidth="2" />
                 </svg>
             )
         },
@@ -80,19 +32,8 @@ function Sidebar() {
             label: "Users",
             icon: (
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                    <circle
-                        cx="12"
-                        cy="8"
-                        r="3.5"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                    />
-                    <path
-                        d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                    />
+                    <circle cx="12" cy="8" r="3.5" stroke="currentColor" strokeWidth="2" />
+                    <path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                 </svg>
             )
         },
@@ -101,12 +42,7 @@ function Sidebar() {
             label: "Maintenance",
             icon: (
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                    <path
-                        d="M14.7 6.3a4 4 0 0 1-5.4 5.4L4 17v3h3l5.3-5.3a4 4 0 0 1 5.4-5.4l-2.8 2.8-2-2 2.8-2.8Z"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinejoin="round"
-                    />
+                    <path d="M14.7 6.3a4 4 0 0 1-5.4 5.4L4 17v3h3l5.3-5.3a4 4 0 0 1 5.4-5.4l-2.8 2.8-2-2 2.8-2.8Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
                 </svg>
             )
         },
@@ -115,21 +51,8 @@ function Sidebar() {
             label: "Reports",
             icon: (
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                    <rect
-                        x="4"
-                        y="3"
-                        width="16"
-                        height="18"
-                        rx="2"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                    />
-                    <path
-                        d="M8 8h8M8 12h8M8 16h5"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                    />
+                    <rect x="4" y="3" width="16" height="18" rx="2" stroke="currentColor" strokeWidth="2" />
+                    <path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                 </svg>
             )
         },
@@ -138,20 +61,8 @@ function Sidebar() {
             label: "Settings",
             icon: (
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                    <circle
-                        cx="12"
-                        cy="12"
-                        r="3"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                    />
-                    <path
-                        d="M19.4 13a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V19a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H4a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.55-1 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H10a1.7 1.7 0 0 0 1-1.55V4a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V10a1.7 1.7 0 0 0 1.55 1H20a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.55 1Z"
-                        stroke="currentColor"
-                        strokeWidth="1.6"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                    />
+                    <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
+                    <path d="M19.4 13a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V19a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H4a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.55-1 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H10a1.7 1.7 0 0 0 1-1.55V4a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V10a1.7 1.7 0 0 0 1.55 1H20a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.55 1Z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
             )
         }
@@ -160,8 +71,7 @@ function Sidebar() {
     const handleLogout = () => {
         localStorage.removeItem("token");
         localStorage.removeItem("user");
-
-        navigate("/");
+        navigate("/", { replace: true });
     };
 
     return (
@@ -190,7 +100,7 @@ function Sidebar() {
                             {item.icon}
                         </span>
 
-                        {item.label}
+                        <span>{item.label}</span>
                     </NavLink>
                 ))}
             </nav>
@@ -206,6 +116,7 @@ function Sidebar() {
                 </div>
 
                 <button
+                    type="button"
                     className="sidebar-logout"
                     onClick={handleLogout}
                 >
@@ -236,7 +147,7 @@ function Sidebar() {
                         />
                     </svg>
 
-                    Logout
+                    <span>Logout</span>
                 </button>
             </div>
         </aside>

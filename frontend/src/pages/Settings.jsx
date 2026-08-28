@@ -1,19 +1,27 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import "./Settings.css";
+import {
+    Card,
+    Form,
+    Input,
+    Button,
+    Avatar,
+    Typography,
+    Alert,
+    Divider,
+    Space
+} from "antd";
+import { LogoutOutlined, UserOutlined } from "@ant-design/icons";
+
+const { Title, Text, Paragraph } = Typography;
 
 const API_URL = "http://localhost:5000/api";
 
 function Settings() {
     const navigate = useNavigate();
+    const [form] = Form.useForm();
 
     const [currentUser, setCurrentUser] = useState(null);
-
-    const [currentPassword, setCurrentPassword] = useState("");
-    const [newPassword, setNewPassword] = useState("");
-    const [confirmPassword, setConfirmPassword] = useState("");
-
     const [message, setMessage] = useState("");
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
@@ -40,44 +48,18 @@ function Settings() {
         currentUser?.Email ||
         "";
 
-    const displayRole =
-        currentUser?.role ||
-        currentUser?.Role ||
-        "admin";
+    const initial = displayName.charAt(0).toUpperCase();
 
-    const initial = displayName
-        .charAt(0)
-        .toUpperCase();
-
-    const handleChangePassword = async (e) => {
-        e.preventDefault();
-
+    const handleChangePassword = async (values) => {
         setMessage("");
         setError("");
-
-        if (!currentPassword || !newPassword || !confirmPassword) {
-            setError("Please fill in all password fields.");
-            return;
-        }
-
-        if (newPassword !== confirmPassword) {
-            setError("New passwords do not match.");
-            return;
-        }
-
-        if (newPassword.length < 6) {
-            setError("New password must be at least 6 characters.");
-            return;
-        }
 
         if (!currentUser?.id && !currentUser?.Id) {
             setError("User information not found. Please log in again.");
             return;
         }
 
-        const userId =
-            currentUser.id ||
-            currentUser.Id;
+        const userId = currentUser.id || currentUser.Id;
 
         try {
             setLoading(true);
@@ -90,8 +72,8 @@ function Settings() {
                         "Content-Type": "application/json"
                     },
                     body: JSON.stringify({
-                        currentPassword,
-                        newPassword
+                        currentPassword: values.currentPassword,
+                        newPassword: values.newPassword
                     })
                 }
             );
@@ -107,19 +89,10 @@ function Settings() {
             }
 
             setMessage("Password changed successfully.");
-
-            setCurrentPassword("");
-            setNewPassword("");
-            setConfirmPassword("");
+            form.resetFields();
         } catch (error) {
-            console.error(
-                "Change password error:",
-                error
-            );
-
-            setError(
-                "Unable to connect to the server."
-            );
+            console.error("Change password error:", error);
+            setError("Unable to connect to the server.");
         } finally {
             setLoading(false);
         }
@@ -128,185 +101,205 @@ function Settings() {
     const handleLogout = () => {
         localStorage.removeItem("token");
         localStorage.removeItem("user");
-
         navigate("/", { replace: true });
     };
 
     return (
-        <main className="settings-page">
-            <header className="settings-header">
-                <div>
-                    <h1>Settings</h1>
+        <div
+            style={{
+                flex: 1,
+                minWidth: 0,
+                padding: "34px 40px",
+                background: "#f5f7fb"
+            }}
+        >
+            <div style={{ marginBottom: 24 }}>
+                <Title level={2} style={{ marginBottom: 4 }}>
+                    Settings
+                </Title>
+                <Paragraph type="secondary" style={{ marginBottom: 0 }}>
+                    Manage your account and security settings.
+                </Paragraph>
+            </div>
 
-                    <p>
-                        Manage your account and security settings.
-                    </p>
-                </div>
-            </header>
-
-            {/* ACCOUNT */}
-            <section className="settings-card">
-                <div className="settings-card-header">
-                    <div>
-                        <h2>Account</h2>
-
-                        <p>
-                            Your current account information.
-                        </p>
-                    </div>
-                </div>
-
-                <div className="settings-account">
-                    <div className="settings-avatar">
-                        {initial}
-                    </div>
-
-                    <div className="settings-account-info">
-                        <strong>
-                            {displayName}
-                        </strong>
-
-                        <span>
-                            System Admin
-                        </span>
-
-                        <small>
-                            {displayEmail}
-                        </small>
-                    </div>
-                </div>
-            </section>
-
-            {/* SECURITY */}
-            <section className="settings-card">
-                <div className="settings-card-header">
-                    <div>
-                        <h2>Security</h2>
-
-                        <p>
-                            Change your account password.
-                        </p>
-                    </div>
-                </div>
-
-                <form
-                    className="settings-form"
-                    onSubmit={handleChangePassword}
+            <Card
+                title="Account"
+                style={{ marginBottom: 20 }}
+            >
+                <Paragraph
+                    type="secondary"
+                    style={{ marginTop: -8 }}
                 >
-                    <div className="settings-form-group">
-                        <label htmlFor="currentPassword">
-                            Current Password
-                        </label>
+                    Your current account information.
+                </Paragraph>
 
-                        <input
-                            id="currentPassword"
-                            type="password"
-                            placeholder="Enter current password"
-                            value={currentPassword}
-                            onChange={(e) =>
-                                setCurrentPassword(
-                                    e.target.value
-                                )
-                            }
-                        />
+                <Space align="center" size={14}>
+                    <Avatar
+                        size={46}
+                        style={{ background: "#edf3ff", color: "#1d4ed8" }}
+                        icon={!displayName ? <UserOutlined /> : undefined}
+                    >
+                        {initial}
+                    </Avatar>
+
+                    <div>
+                        <div style={{ fontWeight: 600, color: "#263146" }}>
+                            {displayName}
+                        </div>
+                        <Text type="secondary" style={{ fontSize: 12 }}>
+                            System Admin
+                        </Text>
+                        <br />
+                        <Text type="secondary" style={{ fontSize: 11 }}>
+                            {displayEmail}
+                        </Text>
                     </div>
+                </Space>
+            </Card>
 
-                    <div className="settings-form-group">
-                        <label htmlFor="newPassword">
-                            New Password
-                        </label>
+            <Card
+                title="Security"
+                style={{ marginBottom: 20 }}
+            >
+                <Paragraph
+                    type="secondary"
+                    style={{ marginTop: -8 }}
+                >
+                    Change your account password.
+                </Paragraph>
 
-                        <input
-                            id="newPassword"
-                            type="password"
-                            placeholder="Enter new password"
-                            value={newPassword}
-                            onChange={(e) =>
-                                setNewPassword(
-                                    e.target.value
-                                )
+                {error && (
+                    <Alert
+                        type="error"
+                        showIcon
+                        message={error}
+                        style={{ marginBottom: 16 }}
+                        closable
+                        onClose={() => setError("")}
+                    />
+                )}
+
+                {message && (
+                    <Alert
+                        type="success"
+                        showIcon
+                        message={message}
+                        style={{ marginBottom: 16 }}
+                        closable
+                        onClose={() => setMessage("")}
+                    />
+                )}
+
+                <Form
+                    form={form}
+                    layout="vertical"
+                    onFinish={handleChangePassword}
+                    style={{ maxWidth: 420 }}
+                >
+                    <Form.Item
+                        label="Current Password"
+                        name="currentPassword"
+                        rules={[
+                            {
+                                required: true,
+                                message: "Please enter your current password."
                             }
-                        />
-                    </div>
+                        ]}
+                    >
+                        <Input.Password placeholder="Enter current password" />
+                    </Form.Item>
 
-                    <div className="settings-form-group">
-                        <label htmlFor="confirmPassword">
-                            Confirm New Password
-                        </label>
-
-                        <input
-                            id="confirmPassword"
-                            type="password"
-                            placeholder="Confirm new password"
-                            value={confirmPassword}
-                            onChange={(e) =>
-                                setConfirmPassword(
-                                    e.target.value
-                                )
+                    <Form.Item
+                        label="New Password"
+                        name="newPassword"
+                        rules={[
+                            {
+                                required: true,
+                                message: "Please enter a new password."
+                            },
+                            {
+                                min: 6,
+                                message:
+                                    "New password must be at least 6 characters."
                             }
-                        />
-                    </div>
+                        ]}
+                    >
+                        <Input.Password placeholder="Enter new password" />
+                    </Form.Item>
 
-                    {error && (
-                        <p className="settings-error">
-                            {error}
-                        </p>
-                    )}
+                    <Form.Item
+                        label="Confirm New Password"
+                        name="confirmPassword"
+                        dependencies={["newPassword"]}
+                        rules={[
+                            {
+                                required: true,
+                                message: "Please confirm your new password."
+                            },
+                            ({ getFieldValue }) => ({
+                                validator(_, value) {
+                                    if (
+                                        !value ||
+                                        getFieldValue("newPassword") === value
+                                    ) {
+                                        return Promise.resolve();
+                                    }
 
-                    {message && (
-                        <p className="settings-success">
-                            {message}
-                        </p>
-                    )}
+                                    return Promise.reject(
+                                        new Error(
+                                            "New passwords do not match."
+                                        )
+                                    );
+                                }
+                            })
+                        ]}
+                    >
+                        <Input.Password placeholder="Confirm new password" />
+                    </Form.Item>
 
-                    <div className="settings-actions">
-                        <button
-                            type="submit"
-                            disabled={loading}
+                    <Form.Item style={{ marginBottom: 0, textAlign: "right" }}>
+                        <Divider style={{ margin: "0 0 16px" }} />
+
+                        <Button
+                            type="primary"
+                            htmlType="submit"
+                            loading={loading}
                         >
-                            {loading
-                                ? "Changing Password..."
-                                : "Change Password"}
-                        </button>
-                    </div>
-                </form>
-            </section>
+                            Change Password
+                        </Button>
+                    </Form.Item>
+                </Form>
+            </Card>
 
-            {/* SESSION */}
-            <section className="settings-card">
-                <div className="settings-card-header">
+            <Card title="Session">
+                <Space
+                    align="center"
+                    style={{
+                        width: "100%",
+                        justifyContent: "space-between"
+                    }}
+                    wrap
+                >
                     <div>
-                        <h2>Session</h2>
-
-                        <p>
-                            Manage your current session.
-                        </p>
-                    </div>
-                </div>
-
-                <div className="settings-session">
-                    <div>
-                        <strong>
+                        <div style={{ fontWeight: 600, color: "#263146" }}>
                             Sign out of your account
-                        </strong>
-
-                        <p>
+                        </div>
+                        <Text type="secondary" style={{ fontSize: 12 }}>
                             You will be returned to the login page.
-                        </p>
+                        </Text>
                     </div>
 
-                    <button
-                        type="button"
-                        className="logout-settings-btn"
+                    <Button
+                        danger
+                        icon={<LogoutOutlined />}
                         onClick={handleLogout}
                     >
                         Logout
-                    </button>
-                </div>
-            </section>
-        </main>
+                    </Button>
+                </Space>
+            </Card>
+        </div>
     );
 }
 
 export default Settings;
-

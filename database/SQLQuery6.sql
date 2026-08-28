@@ -1,0 +1,14 @@
+USE ITAssetManagement;
+GO
+
+CREATE TABLE Maintenance (
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+    Asset NVARCHAR(100) NOT NULL,
+    AssetId NVARCHAR(50) NOT NULL,
+    Type NVARCHAR(50) NOT NULL,
+    AssignedTo NVARCHAR(100) NOT NULL,
+    Date DATE NOT NULL,
+    Status NVARCHAR(50) NOT NULL DEFAULT 'Pending',
+    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE()
+);
+GO
